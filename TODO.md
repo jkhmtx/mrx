@@ -1,0 +1,8 @@
+- Prefix bins with '\_.'
+- Finish Rust porting
+- `mrx status`: Show "needs rebuild" information
+- `mrx checkhealth`: Show pending or broken setup information
+- `mrx init`
+- `mrx build` should be do proper work skipping
+- "how to use" for each binary command
+- package binaries individually

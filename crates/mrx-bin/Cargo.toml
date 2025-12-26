@@ -1,0 +1,21 @@
+[package]
+name = "mrx"
+description = "A Nix DevOps framework for monorepos"
+version = "0.0.1"
+edition = "2024"
+license = "Unlicense"
+repository = "https://www.github.com/jkhmtx/bingo.git"
+keywords = ["nix", "devops", "monorepo", "framework"]
+categories = ["command-line-utilities", "development-tools"]
+default-run = "mrx"
+
+[dependencies]
+mrx-build = { path = "../mrx-build" }
+mrx-cache = { path = "../mrx-cache" }
+mrx-generate = { path = "../mrx-generate" }
+mrx-hook = { path = "../mrx-hook" }
+mrx-refresh = { path = "../mrx-refresh" }
+mrx-show = { path = "../mrx-show" }
+mrx-utils = { path = "../mrx-utils" }
+anyhow = "1.0.100"
+clap = { version = "4.5.53", features = ["derive"] }

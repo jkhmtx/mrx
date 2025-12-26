@@ -1,0 +1,12 @@
+[workspace]
+resolver = "3"
+members = [
+  "crates/macros/cli",
+  "crates/mrx-bin",
+  "crates/mrx-build",
+  "crates/mrx-cache",
+  "crates/mrx-generate",
+  "crates/mrx-hook",
+  "crates/mrx-refresh",
+  "crates/mrx-show",
+]
