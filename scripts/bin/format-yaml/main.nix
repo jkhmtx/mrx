@@ -1,6 +1,10 @@
-{nixpkgs, ...}:
+{
+  nixpkgs,
+  _,
+  ...
+}:
 nixpkgs.writeShellApplication {
-  name = "format-yaml";
+  name = _.name "format-yaml";
 
   runtimeInputs = [
     nixpkgs.git

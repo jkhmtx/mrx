@@ -1,4 +1,8 @@
-{nixpkgs, ...}:
+{
+  nixpkgs,
+  _,
+  ...
+}:
 nixpkgs.writeShellApplication {
   name = "lib.build-and-symlink-derivations.inner";
 

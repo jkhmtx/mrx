@@ -19,6 +19,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub enum Node {
     File(AbsoluteFilePathBuf),
+    // TODO
     Derivation(String, AbsoluteFilePathBuf),
 }
 
@@ -59,6 +60,10 @@ fn walk_for_file_nodes(node: &rnix::SyntaxNode, paths: &mut Vec<String>) {
 }
 
 fn references_within(path: &AbsoluteFilePathBuf) -> Result<Vec<Node>, GraphError> {
+    if !path.is_nix() {
+        return Ok(vec![]);
+    }
+
     let file = std::fs::read(path.as_path())
         .map_err(|e| match e.kind() {
             ErrorKind::NotFound => GraphError::MissingNode(path.to_path_buf()),

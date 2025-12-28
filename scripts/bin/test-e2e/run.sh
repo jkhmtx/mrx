@@ -1,3 +1,3 @@
 # shellcheck shell=bash
 
-mrx --help
+mrx --help >/dev/null 2>&1

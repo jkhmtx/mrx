@@ -38,7 +38,7 @@ impl Attrname {
             name = name.replace(&from, &to);
         }
 
-        Self(name)
+        Self("_.".to_string() + &name)
     }
 }
 

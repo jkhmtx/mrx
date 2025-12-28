@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = "lint";
+  name = _.name "lint";
 
   runtimeInputs = [
     _.lint-commit

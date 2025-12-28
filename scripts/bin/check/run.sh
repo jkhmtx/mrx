@@ -11,9 +11,9 @@ log() {
 }
 
 log Linting...
-lint
+_.lint
 log "Linting done"
 
 log Formatting...
-format
+_.format
 log "Formatting done"

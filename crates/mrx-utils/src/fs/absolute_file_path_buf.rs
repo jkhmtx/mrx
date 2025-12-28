@@ -23,6 +23,13 @@ impl AbsoluteFilePathBuf {
     fn new(buf: PathBuf) -> Self {
         Self(buf)
     }
+
+    #[must_use]
+    pub fn is_nix(&self) -> bool {
+        self.0
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("nix"))
+    }
 }
 
 #[derive(Debug, Error)]

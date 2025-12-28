@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = "check";
+  name = _.name "check";
 
   runtimeInputs = [
     _.format

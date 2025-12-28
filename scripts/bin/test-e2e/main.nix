@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = "test-e2e";
+  name = _.name "test-e2e";
 
   runtimeInputs = [
     _.pkg.mrx

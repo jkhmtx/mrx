@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-lint-commit
-lint-github-actions
-lint-rust
-lint-shell
+_.lint-commit
+_.lint-github-actions
+_.lint-rust
+_.lint-shell

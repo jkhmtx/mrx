@@ -16,12 +16,12 @@ else
 fi
 
 if ! test -f "${cached_bin}"; then
-	"${mrx_bin}" plumbing cache "_.${DERIVATION}"
+	"${mrx_bin}" plumbing cache "${DERIVATION}"
 fi
 
 if test -f "${cached_bin}" && bash -n "${cached_bin}"; then
-	${cached_bin} "${@}"
+	"${cached_bin}" "${@}"
 else
-	echo "ERR: mrx failed to build the derivation '_.${DERIVATION}'"
+	echo "ERR: mrx failed to build the derivation '${DERIVATION}'"
 	exit 1
 fi
