@@ -12,6 +12,7 @@ members = [
 ]
 
 [workspace.lints.clippy]
+cargo = "warn"
 complexity = "deny"
 correctness = "deny"
 perf = "deny"
