@@ -13,4 +13,5 @@ members = [
 
 [workspace.lints.clippy]
 correctness = "deny"
+perf = "deny"
 style = "deny"
