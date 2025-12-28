@@ -5,6 +5,7 @@ use thiserror::Error;
 
 use crate::config::Entrypoint;
 
+#[derive(Debug)]
 pub struct NixBuildCommand<'a> {
     entrypoint: Entrypoint,
     derivations: &'a [String],
@@ -24,6 +25,7 @@ pub enum NixBuildError {
     Failed(String),
 }
 
+#[derive(Debug)]
 pub struct NixBuildOutput {
     pub bin: Option<String>,
     pub out: Option<String>,
@@ -39,10 +41,10 @@ impl TryFrom<&serde_json::Value> for NixBuildOutput {
             .and_then(|value| {
                 let out = value
                     .get("out")
-                    .and_then(|v| v.as_str().map(std::borrow::ToOwned::to_owned));
+                    .and_then(|v| v.as_str().map(ToOwned::to_owned));
                 let bin = value
                     .get("bin")
-                    .and_then(|v| v.as_str().map(std::borrow::ToOwned::to_owned));
+                    .and_then(|v| v.as_str().map(ToOwned::to_owned));
 
                 match (out, bin) {
                     (None, None) => Err(serde_json::error::Error::custom(
@@ -72,7 +74,7 @@ impl NixBuildCommand<'_> {
     pub fn execute(self) -> Result<Vec<NixBuildOutput>, NixBuildError> {
         let mut args: Vec<String> = ["build", "--json", "--no-link"]
             .into_iter()
-            .map(std::string::ToString::to_string)
+            .map(ToString::to_string)
             .collect();
 
         let input_string = if self.derivations.is_empty() {

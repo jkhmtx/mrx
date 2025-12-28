@@ -1,3 +1,5 @@
+use thiserror as _;
+
 mod watch_files;
 
 mod cli;
@@ -8,7 +10,7 @@ use cli::Target;
 use mrx_utils::Config;
 
 pub fn show(config: &Config, options: &Options) {
-    match &options.target {
+    match options.target {
         Target::WatchFiles => watch_files::watch_files(config),
         Target::Graph(graph) => graph::graph(config, graph),
     }

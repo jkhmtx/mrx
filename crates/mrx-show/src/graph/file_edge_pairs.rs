@@ -3,7 +3,7 @@ use mrx_utils::{
     Config,
 };
 
-pub fn file_edge_pairs(config: &Config) {
+pub(super) fn file_edge_pairs(config: &Config) {
     let graph = Graph::try_from(config.get_entrypoint().unwrap()).unwrap();
 
     let edges = graph.to_edges();

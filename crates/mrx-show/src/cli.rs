@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use mrx_utils::{mrx_cli, MrxCli};
 
-#[derive(ValueEnum, Clone, Default)]
+#[derive(ValueEnum, Clone, Copy, Default, Debug)]
 pub enum GraphFormat {
     /// Display the edges of the graph, with start nodes on the left, end nodes on the right
     #[default]
@@ -12,7 +12,7 @@ pub enum GraphFormat {
     UnreachableLib,
 }
 
-#[derive(ValueEnum, Clone, Default)]
+#[derive(ValueEnum, Clone, Copy, Default, Debug)]
 pub enum GraphKind {
     /// Nodes will show as file paths
     #[default]
@@ -21,7 +21,7 @@ pub enum GraphKind {
     Handles,
 }
 
-#[derive(Parser)]
+#[derive(Parser, Clone, Copy, Debug)]
 pub struct GraphOptions {
     /// What format to use for the displayed graph
     #[arg(short, long, value_enum, default_value_t)]
@@ -31,7 +31,7 @@ pub struct GraphOptions {
     pub kind: GraphKind,
 }
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Clone, Copy, Debug)]
 pub enum Target {
     /// Watch files are nodes in the dependency graph.
     /// These files may be consumed by another program, such as 'direnv' or 'entr', to signal that "on files changed" work needs to be done.
@@ -42,7 +42,7 @@ pub enum Target {
 
 /// Print some aspect of the mrx configuration or build system to stdout
 #[mrx_cli]
-#[derive(Parser, MrxCli)]
+#[derive(Parser, MrxCli, Debug)]
 pub struct Options {
     /// What to show
     #[command(subcommand)]

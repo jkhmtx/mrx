@@ -1,6 +1,6 @@
 use mrx_utils::{fs::AbsoluteFilePathBuf, graph::Graph, Config};
 
-pub fn watch_files(config: &Config) {
+pub(crate) fn watch_files(config: &Config) {
     let graph = Graph::try_from(config.get_entrypoint().unwrap()).unwrap();
 
     let generated_out_path =

@@ -4,7 +4,7 @@ mod file_edge_pairs;
 
 use crate::cli::{GraphFormat, GraphKind, GraphOptions};
 
-pub fn graph(config: &Config, options: &GraphOptions) {
+pub(crate) fn graph(config: &Config, options: GraphOptions) {
     match options {
         GraphOptions {
             format: GraphFormat::EdgePairs,

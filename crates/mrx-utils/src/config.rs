@@ -17,7 +17,7 @@ struct ConfigToml {
 }
 
 impl ConfigToml {
-    pub fn entrypoint(&self) -> Option<Entrypoint> {
+    pub(crate) fn entrypoint(&self) -> Option<Entrypoint> {
         self.entrypoint
             .clone()
             .map(Entrypoint::try_from)

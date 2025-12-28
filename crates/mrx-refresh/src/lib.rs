@@ -1,3 +1,5 @@
+use thiserror as _;
+
 use mrx_utils::Config;
 
 mod cli;
