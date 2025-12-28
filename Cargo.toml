@@ -13,3 +13,4 @@ members = [
 
 [workspace.lints.clippy]
 correctness = "deny"
+style = "deny"
