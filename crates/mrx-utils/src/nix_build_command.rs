@@ -1,5 +1,6 @@
-use serde::de::Error;
 use std::io::Write as __;
+
+use serde::de::Error;
 use thiserror::Error;
 
 use crate::config::Entrypoint;
@@ -38,22 +39,23 @@ impl TryFrom<&serde_json::Value> for NixBuildOutput {
             .and_then(|value| {
                 let out = value
                     .get("out")
-                    .and_then(|v| v.as_str().map(|s| s.to_owned()));
+                    .and_then(|v| v.as_str().map(std::borrow::ToOwned::to_owned));
                 let bin = value
                     .get("bin")
-                    .and_then(|v| v.as_str().map(|s| s.to_owned()));
+                    .and_then(|v| v.as_str().map(std::borrow::ToOwned::to_owned));
 
                 match (out, bin) {
                     (None, None) => Err(serde_json::error::Error::custom(
                         "Expected 'out' or 'bin' field",
                     )),
-                    (out, bin) => Ok(NixBuildOutput { out, bin }),
+                    (out, bin) => Ok(NixBuildOutput { bin, out }),
                 }
             })
     }
 }
 
 impl<'a> NixBuildCommand<'a> {
+    #[must_use]
     pub fn new(entrypoint: Entrypoint, derivations: &'a [String]) -> Self {
         Self {
             entrypoint,
@@ -63,10 +65,14 @@ impl<'a> NixBuildCommand<'a> {
 }
 
 impl NixBuildCommand<'_> {
+    /// # Errors
+    /// TODO
+    /// # Panics
+    /// TODO
     pub fn execute(self) -> Result<Vec<NixBuildOutput>, NixBuildError> {
         let mut args: Vec<String> = ["build", "--json", "--no-link"]
             .into_iter()
-            .map(|s| s.to_string())
+            .map(std::string::ToString::to_string)
             .collect();
 
         let input_string = if self.derivations.is_empty() {

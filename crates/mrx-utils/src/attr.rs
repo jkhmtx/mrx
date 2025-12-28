@@ -81,10 +81,10 @@ fn has_path_parts(path: &str, parts: &str) -> bool {
 }
 
 impl PathAttr {
-    fn new(path: PathBuf) -> Self {
+    fn new(path: &Path) -> Self {
         let path_as_str = path.to_string_lossy();
         Self {
-            path: path.clone(),
+            path: path.to_path_buf(),
             kind: {
                 if has_path_parts(&path_as_str, "scripts/bin/") {
                     AttrKind::Bin
@@ -110,20 +110,21 @@ type PathAttrsetDeref = HashMap<Attrname, PathAttr>;
 pub struct PathAttrset<'a>(PathAttrsetDeref, &'a Config);
 
 impl<'a> PathAttrset<'a> {
+    #[must_use]
     pub fn new(config: &'a Config, paths: &[PathBuf]) -> PathAttrset<'a> {
         let mut attrset = Self(PathAttrsetDeref::new(), config);
 
         for path in paths {
-            attrset.add(path.to_path_buf());
+            attrset.add(path);
         }
 
         attrset
     }
 
-    fn add(&mut self, path: PathBuf) {
+    fn add(&mut self, path: &Path) {
         let config = self.1.clone();
 
-        self.insert(Attrname::new(&config, &path), PathAttr::new(path));
+        self.insert(Attrname::new(&config, path), PathAttr::new(path));
     }
 }
 

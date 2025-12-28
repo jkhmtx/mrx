@@ -11,10 +11,20 @@ members = [
   "crates/mrx-show",
 ]
 
+# [workspace.lints.rustc]
+# warnings = "deny"
+# missing_copy_implementations = "deny"
+# missing_debug_implementations = "deny"
+# elided_lifetimes_in_paths = "deny"
+# unreachable_pub = "deny"
+# unused_crate_dependencies = "deny"
+# unused_extern_crates = "deny"
+
 [workspace.lints.clippy]
-cargo = "warn"
+# cargo = "warn"
 complexity = "deny"
 correctness = "deny"
+pedantic = "deny"
 perf = "deny"
 style = "deny"
 suspicious = "deny"

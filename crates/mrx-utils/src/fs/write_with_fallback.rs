@@ -1,5 +1,6 @@
 use std::io::Write as _;
 use std::path::Path;
+
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -17,6 +18,8 @@ type WriteWithFallbackResult<T> = Result<T, WriteWithFallbackError>;
 /// Makes a tempfile A and writes [`bytes`] to it.
 /// Makes a tempfile B and copies [`dest`] to it.
 /// If copying A to [`dest`] fails, an attempt is made to copy B to [`dest`].
+/// # Errors
+/// TODO
 pub fn write_with_fallback(bytes: &[u8], dest: &Path) -> WriteWithFallbackResult<()> {
     use std::fs::copy;
 

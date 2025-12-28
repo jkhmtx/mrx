@@ -2,7 +2,6 @@ use std::path::PathBuf;
 mod cli;
 
 pub use cli::Options;
-
 use mrx_utils::{
     nix_build_command::{NixBuildCommand, NixBuildError},
     Config,
@@ -25,7 +24,11 @@ pub enum CacheError {
 
 type CacheResult<T> = Result<T, CacheError>;
 
-pub fn cache(config: Config, options: Options) -> CacheResult<()> {
+/// # Errors
+/// TODO
+/// # Panics
+/// TODO
+pub fn cache(config: &Config, options: &Options) -> CacheResult<()> {
     let derivations = options
         .derivations
         .iter()
@@ -53,7 +56,7 @@ pub fn cache(config: Config, options: Options) -> CacheResult<()> {
         .filter_map(|output| output.out)
     {
         let derivation = path
-            .split_once("-")
+            .split_once('-')
             .map(|(_, derivation)| derivation)
             .expect("derivation outpath should follow the form '/nix/store/123abc-[derivation]'");
 

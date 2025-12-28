@@ -5,6 +5,7 @@ mod write_with_fallback;
 pub use absolute_file_path_buf::*;
 pub use write_with_fallback::{write_with_fallback, WriteWithFallbackError};
 
+#[must_use]
 pub fn pathbuf_if_exists(path: &str) -> Option<PathBuf> {
     let path = PathBuf::from(path);
 
@@ -15,13 +16,17 @@ pub fn pathbuf_if_exists(path: &str) -> Option<PathBuf> {
     }
 }
 
+/// # Errors
+/// TODO
 pub fn mk_dir(path: &Path) -> Result<(), std::io::Error> {
     std::fs::DirBuilder::new().recursive(true).create(path)
 }
 
+/// # Errors
+/// TODO
 pub fn recreate_dir(path: &Path) -> Result<(), std::io::Error> {
     match std::fs::remove_dir_all(path) {
-        Ok(_) => mk_dir(path),
+        Ok(()) => mk_dir(path),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => mk_dir(path),
         Err(e) => Err(e),
     }

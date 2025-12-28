@@ -12,13 +12,14 @@ fn get_config_ignore(config: &Config) -> Option<&PathBuf> {
                 PathBuf::new().join(config.dir()).join("mrx.ignore.lst")
             }
             ConfigValueError::Io(e) => {
-                panic!("{:?}", e);
+                panic!("{e:?}");
             }
         })
         .ok()
         .and_then(|path| if path.exists() { Some(path) } else { None })
 }
 
+#[must_use]
 pub fn find_nix_path_attrset(config: &Config) -> PathAttrset<'_> {
     let mut builder = WalkBuilder::new(config.dir());
     builder.filter_entry(|entry| {

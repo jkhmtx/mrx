@@ -26,7 +26,7 @@
     meta = {
       mainProgram = "mrx";
       description = "A Nix DevOps framework for monorepos";
-      homepage = "https://github.com/jkhmtx/bingo";
+      homepage = "https://github.com/jkhmtx/mrx";
       license = nixpkgs.lib.licenses.unlicense;
       maintainers = ["jakehamtexas@gmail.com"];
     };

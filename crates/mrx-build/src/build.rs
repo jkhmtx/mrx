@@ -1,12 +1,13 @@
-use crate::cli::Options;
-use mrx_utils::fs::recreate_dir;
-use mrx_utils::nix_build_command::{NixBuildCommand, NixBuildError, NixBuildOutput};
-use mrx_utils::{find_bin_attrnames, Config};
-
 use std::fmt::Write as _;
 use std::os::unix::fs::PermissionsExt as UnixPermissions;
 use std::path::Path;
+
+use mrx_utils::fs::recreate_dir;
+use mrx_utils::nix_build_command::{NixBuildCommand, NixBuildError, NixBuildOutput};
+use mrx_utils::{find_bin_attrnames, Config};
 use thiserror::Error;
+
+use crate::cli::Options;
 
 #[derive(Debug, Error)]
 pub enum BuildError {
@@ -53,7 +54,7 @@ fn write_bin_dir(bin_dir: &Path, config: &Config) -> BuildResult<()> {
                 ("CACHE_DIR", cache_dir.to_string_lossy()),
             ];
 
-            for (k, v) in env_vars.into_iter() {
+            for (k, v) in env_vars {
                 writeln!(&mut buf, "export {k}={v}")
                     .map_err(|_| BuildError::Todo("write_bin_dir"))?;
             }
@@ -73,7 +74,11 @@ fn write_bin_dir(bin_dir: &Path, config: &Config) -> BuildResult<()> {
     Ok(())
 }
 
-pub fn build(config: Config, options: Options) -> BuildResult<Vec<String>> {
+/// # Errors
+/// TODO
+/// # Panics
+/// TODO
+pub fn build(config: &Config, options: &Options) -> BuildResult<Vec<String>> {
     let installables = config.get_installables();
 
     let build_command = config
@@ -98,7 +103,7 @@ pub fn build(config: Config, options: Options) -> BuildResult<Vec<String>> {
         };
 
         reset_bin_dir(&bin_dir)?;
-        write_bin_dir(&bin_dir, &config)?;
+        write_bin_dir(&bin_dir, config)?;
 
         // If sourced by PATH_add in order,
         // any derivation in a symlinkJoin, built via '${INSTALLABLES}',
