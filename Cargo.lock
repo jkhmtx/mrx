@@ -328,10 +328,7 @@ name = "mrx-build"
 version = "0.1.0"
 dependencies = [
  "clap",
- "mrx-macros-cli",
  "mrx-utils",
- "serde",
- "serde_json",
  "thiserror",
 ]
 
@@ -359,6 +356,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "mrx-utils",
+ "thiserror",
 ]
 
 [[package]]
@@ -384,7 +382,7 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "mrx-utils",
- "rnix",
+ "thiserror",
 ]
 
 [[package]]

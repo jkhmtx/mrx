@@ -1,7 +1,11 @@
 use std::{
     ops::Deref,
-    path::{Path, PathBuf},
+    path::{
+        Path,
+        PathBuf,
+    },
 };
+
 use thiserror::Error;
 
 #[derive(Eq, PartialEq, Hash, Clone, Debug)]
@@ -45,6 +49,10 @@ impl TryFrom<PathBuf> for AbsoluteFilePathBuf {
 }
 
 impl AbsoluteFilePathBuf {
+    /// # Errors
+    /// TODO
+    /// # Panics
+    /// TODO
     pub fn try_from_relative(
         path: &Path,
         relative_to: PathBuf,
@@ -62,7 +70,7 @@ impl AbsoluteFilePathBuf {
                     .partition(|s| s.as_os_str() == ".." || s.as_os_str() == ".");
                 for _ in up_traversing.iter().filter(|s| s.as_os_str() != ".") {
                     parent = parent.parent().ok_or(AbsoluteFilePathBufError::NotFound(
-                        parent.join("../").to_path_buf(),
+                        parent.join("../").clone(),
                     ))?;
                 }
 

@@ -21,12 +21,12 @@
       ++ ["cached.sh"]
     );
 
-    cargoHash = "sha256-0klTXMz3pyX8B1TIzCgbKl3JGPdRNIf/rbsDztZy83M=";
+    cargoHash = "sha256-375PwB/D33kqqPkxiR2nNTvwruUijXvUbrD0RfcLYQY=";
 
     meta = {
       mainProgram = "mrx";
       description = "A Nix DevOps framework for monorepos";
-      homepage = "https://github.com/jkhmtx/bingo";
+      homepage = "https://github.com/jkhmtx/mrx";
       license = nixpkgs.lib.licenses.unlicense;
       maintainers = ["jakehamtexas@gmail.com"];
     };

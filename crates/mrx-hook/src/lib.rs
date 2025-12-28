@@ -1,12 +1,16 @@
-use mrx_utils::{find_bin_attrnames, Config};
+use mrx_utils::{
+    Config,
+    find_bin_attrnames,
+};
+use thiserror as _;
 
 mod cli;
 
 pub use cli::Options;
 
-pub fn hook(config: Config, _options: Options) {
+pub fn hook(config: &Config, _options: &Options) {
     let bins = {
-        let mut bins = find_bin_attrnames(&config);
+        let mut bins = find_bin_attrnames(config);
 
         bins.sort();
         bins
@@ -14,6 +18,6 @@ pub fn hook(config: Config, _options: Options) {
 
     println!("The following commands are available in your shell:");
     for bin in bins {
-        println!("  {}", bin);
+        println!("  {bin}");
     }
 }

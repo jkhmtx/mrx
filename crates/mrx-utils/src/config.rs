@@ -1,5 +1,9 @@
+use std::{
+    fs,
+    path::PathBuf,
+};
+
 use serde::Deserialize;
-use std::{fs, path::PathBuf};
 
 const DEFAULT_CONFIG_PATH: &str = "mrx.toml";
 
@@ -16,7 +20,7 @@ struct ConfigToml {
 }
 
 impl ConfigToml {
-    pub fn entrypoint(&self) -> Option<Entrypoint> {
+    pub(crate) fn entrypoint(&self) -> Option<Entrypoint> {
         self.entrypoint
             .clone()
             .map(Entrypoint::try_from)
@@ -35,6 +39,8 @@ pub struct Config {
 }
 
 impl Config {
+    /// # Errors
+    /// TODO
     pub fn default_init() -> Result<Self, ConfigInitError> {
         Self::try_from(PathBuf::from(DEFAULT_CONFIG_PATH))
     }
@@ -55,6 +61,7 @@ pub enum Entrypoint {
 }
 
 impl Entrypoint {
+    #[must_use]
     pub fn as_path(&self) -> &PathBuf {
         match self {
             Self::Flake(path) | Self::File(path) => path,
@@ -65,10 +72,19 @@ impl Entrypoint {
 impl TryFrom<PathBuf> for Entrypoint {
     type Error = ();
     fn try_from(value: PathBuf) -> Result<Self, Self::Error> {
-        match value.file_name().and_then(|name| name.to_str()) {
-            Some("flake.nix") => Ok(Self::Flake(value)),
-            Some(name) if name.ends_with(".nix") => Ok(Self::File(value)),
-            _ => Err(()),
+        let is_nix_file = value
+            .extension()
+            .is_some_and(|ext| ext.eq_ignore_ascii_case("nix"));
+        let is_flake = value
+            .file_prefix()
+            .is_some_and(|name| name.eq_ignore_ascii_case("flake"));
+
+        if is_nix_file && is_flake {
+            Ok(Self::Flake(value))
+        } else if is_nix_file {
+            Ok(Self::File(value))
+        } else {
+            Err(())
         }
     }
 }
@@ -76,22 +92,28 @@ impl TryFrom<PathBuf> for Entrypoint {
 type ConfigValueResult<T> = Result<T, ConfigValueError>;
 
 impl Config {
+    /// # Panics
+    /// TODO
+    #[must_use]
     pub fn dir_absolute(&self) -> PathBuf {
         fs::canonicalize(self.dir()).unwrap()
     }
 
+    #[must_use]
     pub fn dir(&self) -> PathBuf {
         self.path
             .parent()
             .filter(|p| p.exists())
-            .map(|p| p.to_path_buf())
-            .unwrap_or_else(|| PathBuf::from("./"))
+            .map_or_else(|| PathBuf::from("./"), std::path::Path::to_path_buf)
     }
 
+    #[must_use]
     pub fn state_dir(&self) -> PathBuf {
         self.dir().join(".mrx")
     }
 
+    /// # Errors
+    /// TODO
     pub fn get_ignore_file(&self) -> ConfigValueResult<&PathBuf> {
         self.toml
             .ignore_file
@@ -99,6 +121,7 @@ impl Config {
             .ok_or(ConfigValueError::MissingValue("ignore_file".to_string()))
     }
 
+    #[must_use]
     pub fn get_generated_out_path(&self) -> &PathBuf {
         self.toml
             .generated_out_path
@@ -106,6 +129,7 @@ impl Config {
             .unwrap_or(&self.default_generated_out_path)
     }
 
+    #[must_use]
     pub fn get_installables(&self) -> &[String] {
         self.toml
             .installables
@@ -113,6 +137,7 @@ impl Config {
             .unwrap_or(&self.default_installables)
     }
 
+    #[must_use]
     pub fn get_entrypoint(&self) -> Option<Entrypoint> {
         let entrypoint = self.toml.entrypoint();
 
@@ -181,5 +206,7 @@ pub trait MrxCli
 where
     Self: Sized,
 {
+    /// # Errors
+    /// TODO
     fn create_mrx_cli_args() -> ConfigInitResult<(Config, Self)>;
 }

@@ -1,11 +1,19 @@
-use std::{collections::HashMap, io::ErrorKind, path::PathBuf};
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+    io::ErrorKind,
+    path::PathBuf,
+};
 
 mod error;
 use error::GraphError;
 
 use crate::{
-    fs::{AbsoluteFilePathBuf, AbsoluteFilePathBufError},
     Entrypoint,
+    fs::{
+        AbsoluteFilePathBuf,
+        AbsoluteFilePathBufError,
+    },
 };
 
 #[derive(Clone, Debug)]
@@ -19,10 +27,10 @@ impl Node {
         Self::File(path)
     }
 
+    #[must_use]
     pub fn as_path(&self) -> &AbsoluteFilePathBuf {
         match self {
-            Self::File(buf) => buf,
-            Self::Derivation(_, buf) => buf,
+            Self::File(buf) | Self::Derivation(_, buf) => buf,
         }
     }
 }
@@ -34,19 +42,19 @@ pub struct Graph {
     by_path: HashMap<AbsoluteFilePathBuf, usize>,
 }
 
-fn walk_for_file_nodes(node: rnix::SyntaxNode, paths: &mut Vec<String>) {
+fn walk_for_file_nodes(node: &rnix::SyntaxNode, paths: &mut Vec<String>) {
     if node.kind() == rnix::SyntaxKind::NODE_PATH {
         let text = node.text().to_string();
         // If the last component in a path is the character '.',
         // it means it refers to a directory, not a file.
         // e.g. '.', '../.'
-        if !text.ends_with(".") {
+        if !text.ends_with('.') {
             paths.push(text);
         }
     }
 
     for child in node.children() {
-        walk_for_file_nodes(child, paths);
+        walk_for_file_nodes(&child, paths);
     }
 }
 
@@ -62,7 +70,7 @@ fn references_within(path: &AbsoluteFilePathBuf) -> Result<Vec<Node>, GraphError
 
     let root = rnix::Root::parse(&file).syntax();
     let mut paths_in_file = vec![];
-    walk_for_file_nodes(root, &mut paths_in_file);
+    walk_for_file_nodes(&root, &mut paths_in_file);
 
     paths_in_file
         .into_iter()
@@ -77,7 +85,7 @@ fn references_within(path: &AbsoluteFilePathBuf) -> Result<Vec<Node>, GraphError
 pub struct Edge(pub Node, pub Node);
 
 impl Graph {
-    fn new(path: AbsoluteFilePathBuf) -> Self {
+    fn new(path: &AbsoluteFilePathBuf) -> Self {
         Self {
             nodes: vec![Node::new(path.clone())],
             edges: vec![],
@@ -85,10 +93,12 @@ impl Graph {
         }
     }
 
+    #[must_use]
     pub fn as_nodes(&self) -> &Vec<Node> {
         &self.nodes
     }
 
+    #[must_use]
     pub fn to_edges(&self) -> Vec<Edge> {
         self.edges
             .iter()
@@ -106,17 +116,14 @@ impl Graph {
             let path = reference.as_path();
             let curr_idx = self.nodes.len();
 
-            if let Some(next_idx) = match self.by_path.get(path) {
-                Some(old_idx) => {
-                    self.add_edge(idx, *old_idx);
-                    None
-                }
-                None => {
-                    self.by_path.insert(path.clone(), curr_idx);
-                    self.nodes.push(Node::new(path.clone()));
-                    self.add_edge(idx, curr_idx);
-                    Some(curr_idx)
-                }
+            if let Some(next_idx) = if let Some(old_idx) = self.by_path.get(path) {
+                self.add_edge(idx, *old_idx);
+                None
+            } else {
+                self.by_path.insert(path.clone(), curr_idx);
+                self.nodes.push(Node::new(path.clone()));
+                self.add_edge(idx, curr_idx);
+                Some(curr_idx)
             } {
                 self.process(next_idx)?;
             }
@@ -136,7 +143,7 @@ impl TryFrom<Entrypoint> for Graph {
             AbsoluteFilePathBufError::Io(_, e) => GraphError::Io(e),
         })?;
 
-        let mut graph = Graph::new(path);
+        let mut graph = Graph::new(&path);
 
         graph.process(0)?;
 

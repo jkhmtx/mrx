@@ -1,9 +1,16 @@
 mod cli;
-pub use cli::Options;
-use mrx_utils::fs::{self, write_with_fallback, WriteWithFallbackError};
-use mrx_utils::{find_nix_path_attrset, Config};
-
 use std::fmt::Write as _;
+
+pub use cli::Options;
+use mrx_utils::fs::{
+    self,
+    WriteWithFallbackError,
+    write_with_fallback,
+};
+use mrx_utils::{
+    Config,
+    find_nix_path_attrset,
+};
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -18,7 +25,11 @@ pub enum GenerateError {
 
 type GenerateResult<T> = Result<T, GenerateError>;
 
-pub fn generate(config: Config, _options: Options) -> GenerateResult<()> {
+/// # Errors
+/// TODO
+/// # Panics
+/// TODO
+pub fn generate(config: &Config, _options: &Options) -> GenerateResult<()> {
     let out_path = config.get_generated_out_path();
     let destination = config.dir().join(out_path);
     let generated_dir = destination.parent();
@@ -39,7 +50,7 @@ pub fn generate(config: Config, _options: Options) -> GenerateResult<()> {
 
         let mut buf = String::new();
 
-        let attrset = find_nix_path_attrset(&config);
+        let attrset = find_nix_path_attrset(config);
 
         writeln!(&mut buf, "{{")?;
 
@@ -52,7 +63,7 @@ pub fn generate(config: Config, _options: Options) -> GenerateResult<()> {
             .partition(|_| true);
         //.partition(|name| attrset.get(name).unwrap().is_bin());
 
-        for name in root_attrnames.iter() {
+        for name in &root_attrnames {
             let path = attrset.get(name).unwrap().as_path().to_string_lossy();
             writeln!(&mut buf, "  {name} = {prefix}{path};")?;
         }
