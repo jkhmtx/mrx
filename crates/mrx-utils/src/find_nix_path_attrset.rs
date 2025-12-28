@@ -2,7 +2,11 @@ use std::path::PathBuf;
 
 use ignore::WalkBuilder;
 
-use crate::{Config, ConfigValueError, PathAttrset};
+use crate::{
+    Config,
+    ConfigValueError,
+    PathAttrset,
+};
 
 fn get_config_ignore(config: &Config) -> Option<&PathBuf> {
     config

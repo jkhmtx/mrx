@@ -1,5 +1,8 @@
 use clap::Parser;
-use mrx_utils::{mrx_cli, MrxCli};
+use mrx_utils::{
+    MrxCli,
+    mrx_cli,
+};
 
 /// Build the project according to the manifest
 #[mrx_cli]

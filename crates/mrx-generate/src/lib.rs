@@ -2,8 +2,15 @@ mod cli;
 use std::fmt::Write as _;
 
 pub use cli::Options;
-use mrx_utils::fs::{self, write_with_fallback, WriteWithFallbackError};
-use mrx_utils::{find_nix_path_attrset, Config};
+use mrx_utils::fs::{
+    self,
+    WriteWithFallbackError,
+    write_with_fallback,
+};
+use mrx_utils::{
+    Config,
+    find_nix_path_attrset,
+};
 use thiserror::Error;
 
 #[derive(Debug, Error)]

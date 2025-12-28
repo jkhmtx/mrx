@@ -8,7 +8,11 @@ use mrx_refresh::refresh;
 use mrx_show::show;
 use mrx_utils::Config;
 
-use crate::cli::{Mrx, MrxCommand, Plumbing};
+use crate::cli::{
+    Mrx,
+    MrxCommand,
+    Plumbing,
+};
 
 fn main() {
     let (config, options) = Mrx::args().unwrap();

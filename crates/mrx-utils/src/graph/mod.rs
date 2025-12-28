@@ -1,11 +1,19 @@
-use std::{collections::HashMap, fmt::Debug, io::ErrorKind, path::PathBuf};
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+    io::ErrorKind,
+    path::PathBuf,
+};
 
 mod error;
 use error::GraphError;
 
 use crate::{
-    fs::{AbsoluteFilePathBuf, AbsoluteFilePathBufError},
     Entrypoint,
+    fs::{
+        AbsoluteFilePathBuf,
+        AbsoluteFilePathBufError,
+    },
 };
 
 #[derive(Clone, Debug)]

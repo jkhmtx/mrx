@@ -1,9 +1,15 @@
-use std::path::{Path, PathBuf};
+use std::path::{
+    Path,
+    PathBuf,
+};
 
 mod absolute_file_path_buf;
 mod write_with_fallback;
 pub use absolute_file_path_buf::*;
-pub use write_with_fallback::{write_with_fallback, WriteWithFallbackError};
+pub use write_with_fallback::{
+    WriteWithFallbackError,
+    write_with_fallback,
+};
 
 #[must_use]
 pub fn pathbuf_if_exists(path: &str) -> Option<PathBuf> {

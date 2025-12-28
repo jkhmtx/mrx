@@ -1,8 +1,14 @@
 use std::{
     collections::HashMap,
     fmt::Display,
-    ops::{Deref, DerefMut},
-    path::{Path, PathBuf},
+    ops::{
+        Deref,
+        DerefMut,
+    },
+    path::{
+        Path,
+        PathBuf,
+    },
 };
 
 use crate::Config;

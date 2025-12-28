@@ -1,5 +1,12 @@
-use clap::{Parser, Subcommand, ValueEnum};
-use mrx_utils::{mrx_cli, MrxCli};
+use clap::{
+    Parser,
+    Subcommand,
+    ValueEnum,
+};
+use mrx_utils::{
+    MrxCli,
+    mrx_cli,
+};
 
 #[derive(ValueEnum, Clone, Copy, Default, Debug)]
 pub enum GraphFormat {

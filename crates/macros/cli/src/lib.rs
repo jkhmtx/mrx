@@ -1,8 +1,13 @@
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
-    parse::{self, Parser},
-    parse_macro_input, DeriveInput, ItemStruct,
+    DeriveInput,
+    ItemStruct,
+    parse::{
+        self,
+        Parser,
+    },
+    parse_macro_input,
 };
 
 #[proc_macro_attribute]

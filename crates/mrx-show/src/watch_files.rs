@@ -1,4 +1,8 @@
-use mrx_utils::{fs::AbsoluteFilePathBuf, graph::Graph, Config};
+use mrx_utils::{
+    Config,
+    fs::AbsoluteFilePathBuf,
+    graph::Graph,
+};
 
 pub(crate) fn watch_files(config: &Config) {
     let graph = Graph::try_from(config.get_entrypoint().unwrap()).unwrap();

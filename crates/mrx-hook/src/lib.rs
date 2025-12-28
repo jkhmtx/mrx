@@ -1,6 +1,8 @@
+use mrx_utils::{
+    Config,
+    find_bin_attrnames,
+};
 use thiserror as _;
-
-use mrx_utils::{find_bin_attrnames, Config};
 
 mod cli;
 

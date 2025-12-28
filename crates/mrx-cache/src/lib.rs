@@ -3,8 +3,11 @@ mod cli;
 
 pub use cli::Options;
 use mrx_utils::{
-    nix_build_command::{NixBuildCommand, NixBuildError},
     Config,
+    nix_build_command::{
+        NixBuildCommand,
+        NixBuildError,
+    },
 };
 use thiserror::Error;
 

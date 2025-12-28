@@ -1,6 +1,9 @@
 use mrx_utils::{
-    graph::{Edge, Graph},
     Config,
+    graph::{
+        Edge,
+        Graph,
+    },
 };
 
 pub(super) fn file_edge_pairs(config: &Config) {

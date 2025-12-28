@@ -3,8 +3,15 @@ use std::os::unix::fs::PermissionsExt as UnixPermissions;
 use std::path::Path;
 
 use mrx_utils::fs::recreate_dir;
-use mrx_utils::nix_build_command::{NixBuildCommand, NixBuildError, NixBuildOutput};
-use mrx_utils::{find_bin_attrnames, Config};
+use mrx_utils::nix_build_command::{
+    NixBuildCommand,
+    NixBuildError,
+    NixBuildOutput,
+};
+use mrx_utils::{
+    Config,
+    find_bin_attrnames,
+};
 use thiserror::Error;
 
 use crate::cli::Options;

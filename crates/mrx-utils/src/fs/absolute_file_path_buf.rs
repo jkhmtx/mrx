@@ -1,6 +1,9 @@
 use std::{
     ops::Deref,
-    path::{Path, PathBuf},
+    path::{
+        Path,
+        PathBuf,
+    },
 };
 
 use thiserror::Error;

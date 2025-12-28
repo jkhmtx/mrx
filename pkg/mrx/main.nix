@@ -21,7 +21,7 @@
       ++ ["cached.sh"]
     );
 
-    cargoHash = "sha256-0klTXMz3pyX8B1TIzCgbKl3JGPdRNIf/rbsDztZy83M=";
+    cargoHash = "sha256-375PwB/D33kqqPkxiR2nNTvwruUijXvUbrD0RfcLYQY=";
 
     meta = {
       mainProgram = "mrx";
