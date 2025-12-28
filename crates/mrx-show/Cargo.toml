@@ -7,3 +7,6 @@ edition = "2024"
 clap = { version = "4.5.53", features = ["derive"] }
 mrx-utils = { path = "../mrx-utils" }
 rnix = "0.12.0"
+
+[lints]
+workspace = true

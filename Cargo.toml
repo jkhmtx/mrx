@@ -10,3 +10,6 @@ members = [
   "crates/mrx-refresh",
   "crates/mrx-show",
 ]
+
+[workspace.lints.clippy]
+correctness = "deny"
