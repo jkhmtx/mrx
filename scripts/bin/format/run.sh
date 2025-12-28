@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 
-format-nix
-format-rust
-format-shell
-format-yaml
+_.format-nix
+_.format-rust
+_.format-shell
+_.format-yaml

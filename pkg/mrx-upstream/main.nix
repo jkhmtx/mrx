@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = "mrx-upstream";
+  name = "mrx";
 
   runtimeInputs = [upstreamMrx];
 

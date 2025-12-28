@@ -1,6 +1,10 @@
-{nixpkgs, ...}:
+{
+  nixpkgs,
+  _,
+  ...
+}:
 nixpkgs.writeShellApplication {
-  name = "lint-github-actions";
+  name = _.name "lint-github-actions";
 
   runtimeInputs = [
     nixpkgs.actionlint

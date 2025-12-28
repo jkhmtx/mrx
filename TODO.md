@@ -1,5 +1,5 @@
-- Prefix bins with '\_.'
 - Finish Rust porting
+- should use derivation names to help form the dependency graph
 - `mrx status`: Show "needs rebuild" information
 - `mrx checkhealth`: Show pending or broken setup information
 - `mrx init`

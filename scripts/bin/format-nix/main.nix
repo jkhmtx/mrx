@@ -1,6 +1,10 @@
-{nixpkgs, ...}:
+{
+  nixpkgs,
+  _,
+  ...
+}:
 nixpkgs.writeShellApplication {
-  name = "format-nix";
+  name = _.name "format-nix";
 
   runtimeInputs = [
     nixpkgs.alejandra

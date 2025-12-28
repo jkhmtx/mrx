@@ -1,6 +1,10 @@
-{nixpkgs, ...}:
+{
+  nixpkgs,
+  _,
+  ...
+}:
 nixpkgs.writeShellApplication {
-  name = "lint-commit";
+  name = _.name "lint-commit";
 
   runtimeInputs = [nixpkgs.commitlint nixpkgs.git];
 

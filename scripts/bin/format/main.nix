@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = "format";
+  name = _.name "format";
 
   runtimeInputs = [
     _.format-nix

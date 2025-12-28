@@ -2,10 +2,37 @@
 
 set -euo pipefail
 
-nix build '#_.pkg.mrx-upstream' --out-link .mrx/upstream
+function has() {
+  command -v "${1}" 2>&1
+}
 
 function mrx() {
-  ./.mrx/upstream/bin/mrx-upstream "${@}"
+  case "${USE_LOCAL_MRX:-}" in
+  1 | true | yes)
+    if ! has cargo; then
+      paths="$(nix build '#_.shell' --no-link --print-out-paths)"
+
+      while read -r path; do
+        echo "${path}" >&2
+        PATH_add "${path}"/bin
+      done <<<"${paths}"
+    fi
+
+    cargo run -- "${@}"
+    return
+    ;;
+  *) ;;
+  esac
+
+  if has mrx-upstream; then
+    mrx-upstream "${@}"
+  else
+    if ! test -s ./.mrx/upstream/bin/mrx-upstream; then
+      nix build '#_.pkg.mrx-upstream' --out-link .mrx/upstream
+    fi
+
+    ./.mrx/upstream/bin/mrx-upstream "${@}"
+  fi
 }
 
 mrx generate

@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = "build-and-test";
+  name = _.name "build-and-test";
 
   runtimeInputs = [_.test-e2e];
 

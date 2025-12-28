@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = "lint-rust";
+  name = _.name "lint-rust";
 
   runtimeInputs = [
     nixpkgs.findutils

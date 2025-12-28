@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = "local-ci";
+  name = _.name "local-ci";
 
   runtimeInputs = [
     _.build-and-test
