@@ -1,5 +1,5 @@
 pathAttrImports: let
-  mkProjectWith = import ./internal/mk-project-with.nix;
+  mkProjectWith = import ./mk-project-with.nix;
 in
   inputs: let
     nixpkgs =

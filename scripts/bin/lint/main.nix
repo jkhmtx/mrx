@@ -1,17 +1,11 @@
-{
-  nixpkgs,
-  _,
-  ...
-}:
-nixpkgs.writeShellApplication {
+{_, ...}:
+_.run.many {
   name = _.name "lint";
 
-  runtimeInputs = [
+  each = [
     _.lint-commit
     _.lint-github-actions
     _.lint-rust
     _.lint-shell
   ];
-
-  text = builtins.readFile ./run.sh;
 }

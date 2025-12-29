@@ -1,8 +1,17 @@
 - Finish Rust porting
-- should use derivation names to help form the dependency graph
+- Document public APIs properly
+- Use derivation names to help form the dependency graph
+- Create a project workspaces convention
 - `mrx status`: Show "needs rebuild" information
 - `mrx checkhealth`: Show pending or broken setup information
 - `mrx init`
 - `mrx build` should be do proper work skipping
-- "how to use" for each binary command
 - package binaries individually
+- static binaries
+- Nice README
+- "how to use" for each binary command
+- Generate manpages from extended clap documentation
+- recursively assign `_.name` to projects
+- `_.run.parallel`: given a list of apps, run each app in order
+- GitHub Action generator utils: MVP, unopinionated (just basic tools for composing action jobs, steps as nix -> yaml)
+- GitHub Action generator utils: extra, informed by dependency graph

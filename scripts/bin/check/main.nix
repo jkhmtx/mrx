@@ -1,15 +1,13 @@
-{
-  _,
-  nixpkgs,
-  ...
-}:
-nixpkgs.writeShellApplication {
+{_, ...}:
+_.run.many {
   name = _.name "check";
 
-  runtimeInputs = [
+  each = [
     _.format
     _.lint
   ];
 
-  text = builtins.readFile ./run.sh;
+  extraRuntimeEnv = {
+    CI = true;
+  };
 }

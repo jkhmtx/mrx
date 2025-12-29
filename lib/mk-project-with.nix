@@ -1,15 +1,11 @@
 nixpkgs: {pathAttrImports, ...} @ outer: let
   inherit (nixpkgs.lib) isAttrs;
   inherit (nixpkgs.lib.attrsets) mapAttrs;
-  name = s: "_.${s}";
+
+  mkDecoratedInputs = import ./mk-decorated-inputs.nix {inherit nixpkgs;};
 
   mkProject = moduleInputs: let
-    inputs = let
-      allInputs =
-        moduleInputs
-        // pathAttrs;
-    in
-      allInputs // {_ = allInputs._ // {inherit name;};};
+    inputs = mkDecoratedInputs (moduleInputs // pathAttrs);
 
     importAttrs = mapAttrs (_: attrsOrTerminal:
       if isAttrs attrsOrTerminal

@@ -8,7 +8,6 @@
   format-shell = ./scripts/bin/format-shell/main.nix;
   format-yaml = ./scripts/bin/format-yaml/main.nix;
   lib.build-and-symlink-derivations = ./scripts/lib/build-and-symlink-derivations/main.nix;
-  lib.find-bins = ./scripts/lib/find-bins/main.nix;
   lib.find-dependency-graph-edges = ./scripts/lib/find-dependency-graph-edges/main.nix;
   lib.find-generated-nix-raw-attrset = ./scripts/lib/find-generated-nix-raw-attrset/main.nix;
   lib.find-stale-dependency-graph-nodes = ./scripts/lib/find-stale-dependency-graph-nodes/main.nix;
