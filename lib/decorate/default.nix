@@ -6,7 +6,6 @@
 
   decorateSigil = {_, ...}:
     pipe _ (callPkg [
-      ./mk-name-decorated
       ./run
     ]);
 in

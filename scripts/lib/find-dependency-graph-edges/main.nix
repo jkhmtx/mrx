@@ -6,7 +6,7 @@
 _.util.with-tee {
   name = import _/name;
   drv = nixpkgs.writeShellApplication {
-    name = import _/name;
+    name = "${import _/name}.inner";
 
     runtimeInputs = [
       nixpkgs.coreutils
