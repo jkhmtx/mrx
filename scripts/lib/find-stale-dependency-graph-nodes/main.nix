@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = "lib.handle-stale-dependency-graph-nodes";
+  name = _.lib.name "handle-stale-dependency-graph-nodes";
   runtimeInputs = [
     nixpkgs.coreutils
     nixpkgs.gnugrep

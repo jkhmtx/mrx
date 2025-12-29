@@ -1,6 +1,10 @@
-{nixpkgs, ...}:
+{
+  nixpkgs,
+  _,
+  ...
+}:
 nixpkgs.writeShellApplication {
-  name = "lib.mtime-database";
+  name = _.lib.name "mtime-database";
 
   text = builtins.readFile ./run.sh;
 }
