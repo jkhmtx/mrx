@@ -4,9 +4,9 @@
   ...
 }:
 _.util.with-tee {
-  name = _.lib.name "find-dependency-graph-edges";
+  name = import _/name;
   drv = nixpkgs.writeShellApplication {
-    name = _.lib.name "find-dependency-graph-edges.inner";
+    name = import _/name;
 
     runtimeInputs = [
       nixpkgs.coreutils

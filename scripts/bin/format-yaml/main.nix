@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = _.name "format-yaml";
+  name = import _/name;
 
   runtimeInputs = [
     nixpkgs.git

@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = _.name "fix";
+  name = import _/name;
 
   runtimeInputs = [_.check];
 

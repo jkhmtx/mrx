@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = _.name "format-nix";
+  name = import _/name;
 
   runtimeInputs = [
     nixpkgs.alejandra

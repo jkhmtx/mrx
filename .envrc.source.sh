@@ -59,5 +59,5 @@ mrx refresh
 
 mrx hook >&2
 
-rustc_path="$(realpath "$(nix path-info '#shell')"/bin/rustc)"
+rustc_path="$(realpath "$(nix path-info '#_.shell')"/bin/rustc)"
 export RUST_SRC_PATH="${rustc_path/\/bin\/rustc/}/lib/rustlib/src/rust/library"

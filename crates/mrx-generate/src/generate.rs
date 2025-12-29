@@ -1,12 +1,13 @@
 use std::fmt::Write as _;
 
 use mrx_utils::fs::{
-    self,
     WriteWithFallbackError,
+    mk_dir,
     write_with_fallback,
 };
 use mrx_utils::{
     Config,
+    PathAttrset,
     find_nix_path_attrset,
 };
 use thiserror::Error;
@@ -25,17 +26,13 @@ pub enum GenerateError {
 
 type GenerateResult<T> = Result<T, GenerateError>;
 
-/// # Errors
-/// TODO
-/// # Panics
-/// TODO
-pub fn generate(config: &Config, _options: &Options) -> GenerateResult<()> {
+fn write_barrel_file(config: &Config, attrset: &PathAttrset) -> GenerateResult<()> {
     let out_path = config.get_generated_out_path();
     let destination = config.dir().join(out_path);
     let generated_dir = destination.parent();
 
     if let Some(dir) = generated_dir {
-        fs::mk_dir(dir)?;
+        mk_dir(dir)?;
     } else {
         todo!("This case is reachable when config dir is the '/' directory.");
     }
@@ -50,13 +47,12 @@ pub fn generate(config: &Config, _options: &Options) -> GenerateResult<()> {
 
         let mut buf = String::new();
 
-        let attrset = find_nix_path_attrset(config);
-
         writeln!(&mut buf, "{{")?;
 
         let mut attrnames = attrset.keys().cloned().collect::<Vec<_>>();
         attrnames.sort();
 
+        // TODO: Adapt this to a per-workspace presentation
         let (root_attrnames, _non_root_attrnames): (Vec<_>, Vec<_>) = attrnames
             .into_iter()
             //
@@ -80,4 +76,41 @@ pub fn generate(config: &Config, _options: &Options) -> GenerateResult<()> {
             GenerateError::IoError(e)
         }
     })
+}
+
+fn write_name_files(attrset: &PathAttrset) -> GenerateResult<()> {
+    for (attr_name, path_attr) in attrset.iter() {
+        let name_dir = path_attr.as_path().parent().unwrap().join("_/name");
+
+        mk_dir(&name_dir)?;
+
+        let name = {
+            let mut name = String::new();
+
+            writeln!(&mut name, "# GENERATED CODE")?;
+            writeln!(
+                &mut name,
+                "# Use this by adding 'name = import _/name' to '../../main.nix'\n",
+            )?;
+            writeln!(&mut name, "\"{attr_name}\"")?;
+
+            name
+        };
+        std::fs::write(name_dir.join("default.nix"), name.as_bytes())?;
+    }
+
+    Ok(())
+}
+
+/// # Errors
+/// TODO
+/// # Panics
+/// TODO
+pub fn generate(config: &Config, _options: &Options) -> GenerateResult<()> {
+    let attrset = find_nix_path_attrset(config);
+
+    write_barrel_file(config, &attrset)?;
+    write_name_files(&attrset)?;
+
+    Ok(())
 }
