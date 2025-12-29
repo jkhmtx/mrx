@@ -1,4 +1,4 @@
-# \_.run.many
+# \_.mrx.run.many
 
 Given a list of apps, run each app in the order given by `each`.
 

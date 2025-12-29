@@ -1,5 +1,5 @@
 {_, ...}:
-_.run.many {
+_.mrx.run.many {
   name = import _/name;
 
   each = [
