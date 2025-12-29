@@ -24,7 +24,7 @@
 
   assertGetExes = list: let
     invalidTypesStr = join "\n  " (filterLeft list);
-    assertExes = throwIf (any isLeft list) "_.run.many: Members of `each` must be of type 'derivation'. Got:\n  ${invalidTypesStr}";
+    assertExes = throwIf (any isLeft list) "_.mrx.run.many: Members of `each` must be of type 'derivation'. Got:\n  ${invalidTypesStr}";
   in
     assertExes (filterRight list);
 in

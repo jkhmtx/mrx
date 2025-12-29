@@ -1,7 +1,6 @@
 - refactor(mrx/core): rust ports
-- refactor(nix/api)!: Organize public API under `_.mrx` - e.g. `_.mrx.run`, `_.mrx.build`, `_.mrx.gen`
 - feat(nix/api): `_.build.all`
-- feat(nix/api/run): `_.run.parallel`: given a list of apps, run each app in parallel
+- feat(nix/api/run): `_.mrx.run.parallel`: given a list of apps, run each app in parallel
 - docs(mrx/api): document public APIs properly
 - docs(nix/api): document public APIs properly
 - feat(mrx/core): use derivation names to help form the dependency graph

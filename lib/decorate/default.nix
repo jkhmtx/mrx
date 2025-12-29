@@ -6,7 +6,7 @@
 
   decorateSigil = {_, ...}:
     pipe _ (callPkg [
-      ./run
+      ./mrx
     ]);
 in
   inputs: inputs // {_ = decorateSigil inputs;}
