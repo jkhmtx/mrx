@@ -1,6 +1,6 @@
 {_, ...}:
 _.run.many {
-  name = _.name "format";
+  name = import _/name;
 
   each = [
     _.format-nix

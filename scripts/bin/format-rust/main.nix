@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = _.name "format-rust";
+  name = import _/name;
 
   runtimeInputs = [
     nixpkgs.findutils

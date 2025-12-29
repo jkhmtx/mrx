@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = _.lib.name "build-and-symlink-derivations.inner";
+  name = import _/name;
 
   runtimeInputs = [
     nixpkgs.coreutils
