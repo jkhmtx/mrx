@@ -5,7 +5,7 @@
   upstreamMrx,
   ...
 }: let
-  mkProjectWith = import ./mk-project-with.nix;
+  mkProjectWith = import ../mk-project-with.nix;
 
   mapSystems = systems: let
     mkProject' = system: let

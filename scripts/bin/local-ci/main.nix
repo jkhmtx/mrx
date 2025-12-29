@@ -1,15 +1,9 @@
-{
-  nixpkgs,
-  _,
-  ...
-}:
-nixpkgs.writeShellApplication {
+{_, ...}:
+_.run.many {
   name = _.name "local-ci";
 
-  runtimeInputs = [
+  each = [
     _.build-and-test
     _.check
   ];
-
-  text = builtins.readFile ./run.sh;
 }
