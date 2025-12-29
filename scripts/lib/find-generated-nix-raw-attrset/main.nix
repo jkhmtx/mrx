@@ -1,12 +1,13 @@
 {
   nixpkgs,
   infallible,
+  _,
   ...
 }:
 infallible.with-tee {
-  name = "lib.find-generated-nix-raw-attrset";
+  name = _.lib.name "find-generated-nix-raw-attrset";
   drv = nixpkgs.writeShellApplication {
-    name = "lib.find-generated-nix-raw-attrset.inner";
+    name = _.lib.name "find-generated-nix-raw-attrset.inner";
 
     runtimeInputs = [
       nixpkgs.git
