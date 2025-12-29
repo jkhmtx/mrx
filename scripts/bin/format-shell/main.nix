@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = _.name "format-shell";
+  name = import _/name;
 
   runtimeInputs = [
     nixpkgs.git

@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = _.lib.name "generate-ignore-patterns-file";
+  name = import _/name;
   runtimeInputs = [
     nixpkgs.coreutils
     nixpkgs.gnused

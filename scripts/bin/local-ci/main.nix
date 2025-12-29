@@ -1,6 +1,6 @@
 {_, ...}:
 _.run.many {
-  name = _.name "local-ci";
+  name = import _/name;
 
   each = [
     _.build-and-test

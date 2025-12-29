@@ -1,6 +1,6 @@
 {_, ...}:
 _.run.many {
-  name = _.name "lint";
+  name = import _/name;
 
   each = [
     _.lint-commit

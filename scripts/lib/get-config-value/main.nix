@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = _.lib.name "get-config-value";
+  name = import _/name;
 
   runtimeInputs = [nixpkgs.tomlq];
 

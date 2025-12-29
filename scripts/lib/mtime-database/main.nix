@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = _.lib.name "mtime-database";
+  name = import _/name;
 
   text = builtins.readFile ./run.sh;
 }

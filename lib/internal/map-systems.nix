@@ -34,7 +34,6 @@
       system: let
         project = mkProject' system;
       in {
-        inherit (project) shell;
         _ = project;
         default = project.pkg.mrx;
       }

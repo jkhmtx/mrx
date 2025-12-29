@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = _.name "lint-github-actions";
+  name = import _/name;
 
   runtimeInputs = [
     nixpkgs.actionlint
