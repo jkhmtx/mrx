@@ -4,10 +4,11 @@ nixpkgs: {pathAttrImports, ...} @ outer: let
 
   inherit (utils.attrs) walk;
 
-  decorate = import ./decorate {inherit nixpkgs utils;};
+  decorateInputs = import ./inputs {inherit nixpkgs utils;};
+  decorateOutputs = import ./outputs {inherit nixpkgs utils;};
 
   mkProject = moduleInputs: let
-    inputs = decorate (moduleInputs // pathAttrs);
+    inputs = decorateInputs (moduleInputs // pathAttrs);
 
     importAttrs = walk {whenNot = _continue: _acc: _name: value: import value inputs;} null;
 
@@ -19,5 +20,4 @@ nixpkgs: {pathAttrImports, ...} @ outer: let
 
   project =
     mkProject outer;
-in
-  project
+in (decorateOutputs project)

@@ -2,7 +2,6 @@
 - feat(nix/api/run): `_.mrx.run.parallel`: given a list of apps, run each app in parallel
 - feat(nix/api/gen/ci): GHA generator utils (enhanced) - extra, informed by dependency graph
 - feat(nix/api/gen/ci): GHA generator utils (MVP) - unopinionated (just basic tools for composing action jobs from derivations, steps as nix -> yaml)
-- feat(nix/api): `_.build.all`
 - feat(mrx/core/build): `mrx build` should be do proper work skipping
 - feat(mrx/core): use derivation names to help form the dependency graph
 - feat(mrx/core): create a project workspaces convention
