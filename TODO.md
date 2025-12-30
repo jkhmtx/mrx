@@ -1,19 +1,18 @@
 - refactor(mrx/core): rust ports
-- feat(nix/api): `_.build.all`
 - feat(nix/api/run): `_.mrx.run.parallel`: given a list of apps, run each app in parallel
-- docs(mrx/api): document public APIs properly
-- docs(nix/api): document public APIs properly
+- feat(nix/api/gen/ci): GHA generator utils (enhanced) - extra, informed by dependency graph
+- feat(nix/api/gen/ci): GHA generator utils (MVP) - unopinionated (just basic tools for composing action jobs from derivations, steps as nix -> yaml)
+- feat(mrx/core/build): `mrx build` should be do proper work skipping
 - feat(mrx/core): use derivation names to help form the dependency graph
 - feat(mrx/core): create a project workspaces convention
-- feat(mrx/api): `mrx status` - Show "needs rebuild" information
+- feat(mrx/api/init): `mrx init` - Setup wizard
 - feat(mrx/api/generate): `mrx generate --check` - Show a summary of "needs generate" and exit 1 if any found
 - feat(mrx/api/checkhealth): `mrx checkhealth` - Show pending or broken setup information
-- feat(mrx/api/init): `mrx init` - Setup wizard
-- feat(mrx/core/build): `mrx build` should be do proper work skipping
-- build(mrx/package): package binaries individually
-- build(mrx/package): static binaries
-- docs(docs): Nice README
-- docs(mrx/api): "how to use" for each binary command
+- feat(mrx/api): `mrx status` - Show "needs rebuild" information
+- docs(nix/api): document public APIs properly
+- docs(mrx/api): document public APIs properly
 - docs(mrx/api): Generate manpages from extended clap documentation
-- feat(nix/api/gen/ci): GHA generator utils (MVP) - unopinionated (just basic tools for composing action jobs from derivations, steps as nix -> yaml)
-- feat(nix/api/gen/ci): GHA generator utils (enhanced) - extra, informed by dependency graph
+- docs(mrx/api): "how to use" for each binary command
+- docs(docs): Nice README
+- build(mrx/package): static binaries
+- build(mrx/package): package binaries individually
