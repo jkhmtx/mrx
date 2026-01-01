@@ -6,7 +6,7 @@
           "mrx"
         ],
         "nixpkgsSrc": [
-          "nixpkgsSrc"
+          "nixpkgs"
         ],
         "rustOverlay": [
           "rustOverlay"
@@ -26,7 +26,7 @@
         "type": "github"
       }
     },
-    "nixpkgsSrc": {
+    "nixpkgs": {
       "locked": {
         "lastModified": 1766902085,
         "narHash": "sha256-coBu0ONtFzlwwVBzmjacUQwj3G+lybcZ1oeNSQkgC0M=",
@@ -45,14 +45,14 @@
     "root": {
       "inputs": {
         "mrx": "mrx",
-        "nixpkgsSrc": "nixpkgsSrc",
+        "nixpkgs": "nixpkgs",
         "rustOverlay": "rustOverlay"
       }
     },
     "rustOverlay": {
       "inputs": {
         "nixpkgs": [
-          "nixpkgsSrc"
+          "nixpkgs"
         ]
       },
       "locked": {

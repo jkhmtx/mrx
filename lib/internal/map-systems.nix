@@ -11,7 +11,7 @@
     mkProject' = system: let
       nixpkgs = import nixpkgsSrc {
         inherit system;
-        overlays = [rustOverlay.overlays.default];
+        overlays = [rustOverlay];
       };
 
       project = (mkProjectWith nixpkgs) {
