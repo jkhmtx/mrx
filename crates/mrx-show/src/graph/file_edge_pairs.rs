@@ -1,21 +1,29 @@
+use std::path::Path;
+
 use mrx_utils::{
     Config,
     graph::{
         Edge,
         Graph,
+        Node,
     },
 };
 
-pub(super) fn file_edge_pairs(config: &Config) {
-    let graph = Graph::try_from(config.get_entrypoint().unwrap()).unwrap();
+fn display(node: &Node, dir: &Path) -> String {
+    node.as_path()
+        .as_relative_to_parent(dir)
+        .unwrap()
+        .to_string_lossy()
+        .to_string()
+}
 
-    let edges = graph.to_edges();
+pub(super) fn file_edge_pairs(config: &Config) -> Vec<(String, String)> {
+    let graph = Graph::new(config).unwrap();
 
-    for Edge(a, b) in edges {
-        println!(
-            "{} {}",
-            a.as_path().as_path().display(),
-            b.as_path().as_path().display()
-        );
-    }
+    let dir = config.dir();
+    graph
+        .to_edges()
+        .into_iter()
+        .map(|Edge(a, b)| (display(&a, &dir), display(&b, &dir)))
+        .collect::<Vec<_>>()
 }
