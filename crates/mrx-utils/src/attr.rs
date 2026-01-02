@@ -11,36 +11,20 @@ use std::{
     },
 };
 
-use crate::Config;
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum AttrnameError {
+    #[error("Invalid attrname: {0}")]
+    Name(String),
+    #[error("Invalid path: {0}")]
+    Path(PathBuf),
+}
 
 type AttrnameDeref = String;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, PartialOrd, Ord)]
 pub struct Attrname(pub AttrnameDeref);
-
-impl Attrname {
-    fn new(_config: &Config, path: &Path) -> Self {
-        let mut name = path
-            .components()
-            .skip(1)
-            .take_while(|c| c.as_os_str() != "main.nix")
-            .map(|c| c.as_os_str().to_string_lossy())
-            .collect::<Vec<_>>()
-            .join(".");
-
-        for (from, to) in [
-            ("scripts.bin.", ""),
-            ("scripts.lib.", "lib."),
-            ("scripts.util.", "util."),
-        ]
-        .map(|(a, b)| (a.to_string(), b.to_string()))
-        {
-            name = name.replace(&from, &to);
-        }
-
-        Self("_.".to_string() + &name)
-    }
-}
 
 impl Display for Attrname {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -62,6 +46,62 @@ impl DerefMut for Attrname {
     }
 }
 
+impl TryFrom<&Path> for Attrname {
+    type Error = AttrnameError;
+
+    fn try_from(value: &Path) -> Result<Self, Self::Error> {
+        if !value.starts_with("./") {
+            return Err(AttrnameError::Path(value.to_path_buf()));
+        }
+
+        let mut name = value
+            .components()
+            .skip(1)
+            .take_while(|c| c.as_os_str() != "main.nix")
+            .map(|c| c.as_os_str().to_string_lossy())
+            .collect::<Vec<_>>()
+            .join(".");
+
+        for (from, to) in [
+            ("scripts.bin.", ""),
+            ("scripts.lib.", "lib."),
+            ("scripts.util.", "util."),
+        ]
+        .map(|(a, b)| (a.to_string(), b.to_string()))
+        {
+            name = name.replace(&from, &to);
+        }
+
+        Ok(Self("_.".to_string() + &name))
+    }
+}
+
+impl TryFrom<&str> for Attrname {
+    type Error = AttrnameError;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::try_from(value.to_string())
+    }
+}
+
+impl TryFrom<String> for Attrname {
+    type Error = AttrnameError;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.starts_with("_.") {
+            Ok(Self(value))
+        } else {
+            Err(AttrnameError::Name(value))
+        }
+    }
+}
+
+impl Attrname {
+    pub fn is_internal(&self) -> bool {
+        self.starts_with("_.mrx")
+    }
+}
+
 #[derive(Debug)]
 enum AttrKind {
     Bin,
@@ -77,8 +117,8 @@ pub struct PathAttr {
 }
 
 impl PathAttr {
-    pub fn as_path(&self) -> &PathBuf {
-        &self.path
+    pub fn as_path(&self) -> &Path {
+        self.path.as_path()
     }
 }
 
@@ -89,19 +129,21 @@ fn has_path_parts(path: &str, parts: &str) -> bool {
 impl PathAttr {
     fn new(path: &Path) -> Self {
         let path_as_str = path.to_string_lossy();
+        let kind = {
+            if has_path_parts(&path_as_str, "scripts/bin/") {
+                AttrKind::Bin
+            } else if has_path_parts(&path_as_str, "scripts/lib/") {
+                AttrKind::Lib
+            } else if has_path_parts(&path_as_str, "pkg/") {
+                AttrKind::Pkg
+            } else {
+                AttrKind::Other
+            }
+        };
+
         Self {
             path: path.to_path_buf(),
-            kind: {
-                if has_path_parts(&path_as_str, "scripts/bin/") {
-                    AttrKind::Bin
-                } else if has_path_parts(&path_as_str, "scripts/lib/") {
-                    AttrKind::Lib
-                } else if has_path_parts(&path_as_str, "pkg/") {
-                    AttrKind::Pkg
-                } else {
-                    AttrKind::Other
-                }
-            },
+            kind,
         }
     }
 
@@ -110,31 +152,38 @@ impl PathAttr {
     }
 }
 
+#[derive(Debug, Error)]
+pub enum PathAttrsetError {
+    #[error("{0}")]
+    Attrname(#[from] AttrnameError),
+}
+
 type PathAttrsetDeref = HashMap<Attrname, PathAttr>;
 
-#[derive(Debug)]
-pub struct PathAttrset<'a>(PathAttrsetDeref, &'a Config);
+#[derive(Debug, Default)]
+pub struct PathAttrset(PathAttrsetDeref);
 
-impl<'a> PathAttrset<'a> {
-    #[must_use]
-    pub fn new(config: &'a Config, paths: &[PathBuf]) -> PathAttrset<'a> {
-        let mut attrset = Self(PathAttrsetDeref::new(), config);
+impl PathAttrset {
+    /// # Errors
+    /// An error is returned if any of the paths are not relative paths beginning with "./"
+    pub fn new(paths: impl IntoIterator<Item = PathBuf>) -> Result<Self, PathAttrsetError> {
+        let mut attrset = Self(PathAttrsetDeref::new());
 
         for path in paths {
-            attrset.add(path);
+            attrset.add(&path)?;
         }
 
-        attrset
+        Ok(attrset)
     }
 
-    fn add(&mut self, path: &Path) {
-        let config = self.1.clone();
+    fn add(&mut self, path: &Path) -> Result<(), PathAttrsetError> {
+        self.insert(Attrname::try_from(path)?, PathAttr::new(path));
 
-        self.insert(Attrname::new(&config, path), PathAttr::new(path));
+        Ok(())
     }
 }
 
-impl Deref for PathAttrset<'_> {
+impl Deref for PathAttrset {
     type Target = PathAttrsetDeref;
 
     fn deref(&self) -> &Self::Target {
@@ -142,7 +191,7 @@ impl Deref for PathAttrset<'_> {
     }
 }
 
-impl DerefMut for PathAttrset<'_> {
+impl DerefMut for PathAttrset {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }

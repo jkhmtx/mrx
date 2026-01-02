@@ -1,4 +1,7 @@
-use std::path::PathBuf;
+use std::{
+    path::PathBuf,
+    result::Result,
+};
 
 use ignore::WalkBuilder;
 
@@ -23,8 +26,10 @@ fn get_config_ignore(config: &Config) -> Option<&PathBuf> {
         .and_then(|path| if path.exists() { Some(path) } else { None })
 }
 
+/// # Panics
+/// Panics if [`WalkBuilder`] somehow gives non-relative paths to [`PathAttrset::new`]
 #[must_use]
-pub fn find_nix_path_attrset(config: &Config) -> PathAttrset<'_> {
+pub fn find_nix_path_attrset(config: &Config) -> PathAttrset {
     let mut builder = WalkBuilder::new(config.dir());
     builder.filter_entry(|entry| {
         entry.path().is_dir() || entry.file_name().to_string_lossy() == "main.nix"
@@ -36,17 +41,9 @@ pub fn find_nix_path_attrset(config: &Config) -> PathAttrset<'_> {
 
     let paths = builder
         .build()
-        .filter_map(|r| {
-            r.ok().and_then(|d| {
-                let dir = d.path();
-                if dir.is_dir() {
-                    None
-                } else {
-                    Some(dir.to_owned())
-                }
-            })
-        })
-        .collect::<Vec<_>>();
+        .filter_map(Result::ok)
+        .filter(|dir_entry| dir_entry.file_type().is_some_and(|ft| !ft.is_dir()))
+        .map(|dir_entry| dir_entry.path().to_owned());
 
-    PathAttrset::new(config, paths.into_iter().as_slice())
+    PathAttrset::new(paths).expect("Invalid paths were given by 'builder'")
 }
