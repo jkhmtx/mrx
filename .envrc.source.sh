@@ -27,11 +27,11 @@ function mrx() {
   if has mrx-upstream; then
     mrx-upstream "${@}"
   else
-    if ! test -s ./.mrx/upstream/bin/mrx-upstream; then
+    if ! test -s ./.mrx/upstream/bin/mrx; then
       nix build '#_.pkg.mrx-upstream' --out-link .mrx/upstream
     fi
 
-    ./.mrx/upstream/bin/mrx-upstream "${@}"
+    ./.mrx/upstream/bin/mrx "${@}"
   fi
 }
 
