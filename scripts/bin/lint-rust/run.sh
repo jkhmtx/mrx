@@ -10,6 +10,8 @@ check_flags=(--workspace --all-targets)
 if ! test -v CI; then
 	clippy_flags+=(--fix --allow-dirty --quiet)
 	check_flags+=(--quiet)
+else
+	export RUSTFLAGS='-D warnings'
 fi
 
 cargo clippy "${clippy_flags[@]}"

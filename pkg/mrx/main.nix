@@ -8,16 +8,22 @@
     rustc = _.pkg.rust;
   };
 
-  crateSrc = crate: ["crates/${crate}" "crates/${crate}/src"];
+  crateSrcOf = dir: crate: [
+    dir
+    "${dir}/${crate}"
+    "${dir}/${crate}/src"
+    ".+\.rs"
+    "^Cargo\.lock$"
+    ".*Cargo\.toml"
+  ];
 
   package = rustPlatform.buildRustPackage {
     pname = "mrx";
     version = "0.0.1";
 
     src = nixpkgs.lib.sourceByRegex ../../. (
-      ["crates"]
-      ++ (crateSrc ".+")
-      ++ [".+\.rs" "^Cargo\.lock$" ".*Cargo\.toml"]
+      []
+      ++ (crateSrcOf "crates" ".+")
       ++ ["cached.sh"]
     );
 

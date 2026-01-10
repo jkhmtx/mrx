@@ -1,12 +1,9 @@
-{
-  nixpkgs,
-  _,
-  ...
-}:
-nixpkgs.writeShellApplication {
+{_, ...}:
+_.mrx.run.many {
   name = import _/name;
 
-  runtimeInputs = [_.check];
-
-  text = builtins.readFile ./run.sh;
+  each = [
+    _.format
+    _.lint
+  ];
 }

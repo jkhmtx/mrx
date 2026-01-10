@@ -13,7 +13,7 @@
       url = "github:jkhmtx/mrx";
       inputs = {
         mrx.follows = "mrx";
-        nixpkgsSrc.follows = "nixpkgs";
+        nixpkgs.follows = "nixpkgs";
         rustOverlay.follows = "rustOverlay";
       };
     };

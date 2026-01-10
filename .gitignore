@@ -6,3 +6,7 @@ result
 
 ## mrx - generated
 pkg/rust/_/name
+
+# build output
+target
+result*

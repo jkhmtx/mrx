@@ -5,7 +5,7 @@
         "mrx": [
           "mrx"
         ],
-        "nixpkgsSrc": [
+        "nixpkgs": [
           "nixpkgs"
         ],
         "rustOverlay": [
@@ -13,11 +13,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1766992884,
-        "narHash": "sha256-vA8vjgYpzUeHgT/8C9ENM/w554VjsKn6u8qegwZ+tcM=",
+        "lastModified": 1767366351,
+        "narHash": "sha256-8/KoQRlu3jUk8374+yrRNtU8XuZOXFNMNIa3iubNbHE=",
         "owner": "jkhmtx",
         "repo": "mrx",
-        "rev": "3a4a27d0ea4531b99c78f2c30e9ae7f53b17f0f9",
+        "rev": "3a784246fcfa29771d71f38257f29cd3b2cadcaf",
         "type": "github"
       },
       "original": {
