@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                    select mtime from node where path = ?\n                ",
+  "describe": {
+    "columns": [
+      {
+        "name": "mtime",
+        "ordinal": 0,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "0a3f9f2058d88f4f5f8f3687dae899c9daef04d9076bca4c0a6283a0a8cf1093"
+}

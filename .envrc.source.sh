@@ -27,11 +27,11 @@ function mrx() {
   if has mrx-upstream; then
     mrx-upstream "${@}"
   else
-    if ! test -s ./.mrx/upstream/bin/mrx-upstream; then
+    if ! test -s ./.mrx/upstream/bin/mrx; then
       nix build '#_.pkg.mrx-upstream' --out-link .mrx/upstream
     fi
 
-    ./.mrx/upstream/bin/mrx-upstream "${@}"
+    ./.mrx/upstream/bin/mrx "${@}"
   fi
 }
 
@@ -53,7 +53,8 @@ mrx show watch-files \
 mapfile -t watch_files <"${watch_files_lst}"
 rm "${watch_files_lst}"
 
-watch_file "${watch_files[@]}"
+export watch_files # temp
+# watch_file "${watch_files[@]}"
 
 mrx refresh
 
@@ -61,3 +62,5 @@ mrx hook >&2
 
 rustc_path="$(realpath "$(nix path-info '#_.shell')"/bin/rustc)"
 export RUST_SRC_PATH="${rustc_path/\/bin\/rustc/}/lib/rustlib/src/rust/library"
+
+nix run '#_.prepare' || true

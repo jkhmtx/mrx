@@ -1,6 +1,8 @@
 {
   build-and-test = ./scripts/bin/build-and-test/main.nix;
   check = ./scripts/bin/check/main.nix;
+  dev.reset-db = ./scripts/bin/dev/reset-db/main.nix;
+  dev.run = ./scripts/bin/dev/run/main.nix;
   fix = ./scripts/bin/fix/main.nix;
   format = ./scripts/bin/format/main.nix;
   format-nix = ./scripts/bin/format-nix/main.nix;
@@ -21,9 +23,12 @@
   lint-rust = ./scripts/bin/lint-rust/main.nix;
   lint-shell = ./scripts/bin/lint-shell/main.nix;
   local-ci = ./scripts/bin/local-ci/main.nix;
+  migrations.apply = ./scripts/bin/migrations/apply/main.nix;
   pkg.mrx = ./pkg/mrx/main.nix;
   pkg.mrx-upstream = ./pkg/mrx-upstream/main.nix;
   pkg.rust = ./pkg/rust/main.nix;
+  pkg.sqlx = ./pkg/sqlx/main.nix;
+  prepare = ./scripts/bin/prepare/main.nix;
   shell = ./shell/main.nix;
   test-e2e = ./scripts/bin/test-e2e/main.nix;
   util.with-tee = ./scripts/util/with-tee/main.nix;

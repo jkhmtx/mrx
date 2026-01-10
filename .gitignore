@@ -1,8 +1,12 @@
-target
-result
+# application
+schema.db
 
 # mrx
 .mrx
 
 ## mrx - generated
 pkg/rust/_/name
+
+# build output
+target
+result*
