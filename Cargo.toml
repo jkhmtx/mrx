@@ -9,6 +9,7 @@ members = [
   "crates/mrx-hook",
   "crates/mrx-refresh",
   "crates/mrx-show",
+  "xtask",
 ]
 
 [workspace.lints.rust]
@@ -34,3 +35,6 @@ pedantic = "warn"
 perf = "warn"
 style = "warn"
 suspicious = "warn"
+
+[profile.dev.package.sqlx-macros]
+opt-level = 3

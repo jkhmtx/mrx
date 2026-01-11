@@ -1,3 +1,5 @@
+use sqlx as _;
+use tokio as _;
 mod cache;
 mod cli;
 

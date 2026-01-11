@@ -4,10 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = import _/name;
-  runtimeInputs = [
-    _.migrations.apply
-    _.pkg.sqlx
-  ];
+  name = "sqlx";
+  runtimeInputs = [_.pkg.rust];
   text = builtins.readFile ./run.sh;
 }

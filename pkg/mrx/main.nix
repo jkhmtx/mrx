@@ -21,13 +21,26 @@
     pname = "mrx";
     version = "0.0.1";
 
+    nativeBuildInputs = [
+      nixpkgs.pkg-config
+    ];
+
+    buildInputs = [
+      nixpkgs.openssl
+    ];
+
+    # No tests!
+    doCheck = false;
+
     src = nixpkgs.lib.sourceByRegex ../../. (
       []
+      ++ [".sqlx" ".+\.json"]
       ++ (crateSrcOf "crates" ".+")
+      ++ (crateSrcOf "xtask" "src")
       ++ ["cached.sh"]
     );
 
-    cargoHash = "sha256-375PwB/D33kqqPkxiR2nNTvwruUijXvUbrD0RfcLYQY=";
+    cargoLock.lockFile = ../../Cargo.lock;
 
     meta = {
       mainProgram = "mrx";
