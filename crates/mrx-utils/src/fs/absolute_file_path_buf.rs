@@ -1,4 +1,5 @@
 use std::{
+    fmt::Display,
     fs,
     ops::Deref,
     path::{
@@ -176,6 +177,18 @@ impl AbsoluteFilePathBuf {
                 self.as_path().to_string_lossy()
             ))
         })
+    }
+}
+
+impl Display for AbsoluteFilePathBuf {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let display_str = self
+            .0
+            .as_path()
+            .to_str()
+            .ok_or_else(std::fmt::Error::default)?;
+
+        f.write_str(display_str)
     }
 }
 

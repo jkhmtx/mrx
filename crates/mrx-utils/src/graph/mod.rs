@@ -26,8 +26,8 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub struct Node {
-    path: AbsoluteFilePathBuf,
-    derivation: Option<Attrname>,
+    pub path: AbsoluteFilePathBuf,
+    pub derivation: Option<Attrname>,
 }
 
 impl Node {
@@ -195,6 +195,45 @@ fn get_idx_or_create_node(
     }
 }
 
+fn set_dependencies<'deps, 'graph>(
+    dependencies: &'deps mut HashMap<usize, &'graph Node>,
+    visited: &mut HashSet<usize>,
+    graph: &'graph Graph,
+    idx: usize,
+) -> Option<Vec<usize>>
+where
+    'graph: 'deps,
+{
+    if visited.contains(&idx) {
+        None
+    } else {
+        let mut next = vec![];
+        for (home_idx, depends_on_idx) in &graph.edges {
+            if home_idx == &idx {
+                let node = &graph.nodes[*depends_on_idx];
+                dependencies.insert(*depends_on_idx, node);
+                next.push(*depends_on_idx);
+            }
+        }
+        visited.insert(idx);
+
+        Some(next)
+    }
+}
+
+fn set_dependencies_r<'graph>(
+    parents: &mut HashMap<usize, &'graph Node>,
+    visited: &mut HashSet<usize>,
+    graph: &'graph Graph,
+    idx: usize,
+) {
+    if let Some(next) = set_dependencies(parents, visited, graph, idx) {
+        for idx in &next {
+            set_dependencies_r(parents, visited, graph, *idx);
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Edge(pub Node, pub Node);
 
@@ -204,7 +243,7 @@ enum NodeOrIdx {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
-enum NodeId {
+pub enum NodeId {
     Attrname(Attrname),
     Path(AbsoluteFilePathBuf),
 }
@@ -293,8 +332,8 @@ impl Graph {
         }
     }
 
-    fn add_edge(&mut self, from: usize, to: usize) {
-        self.edges.push((from, to));
+    fn add_edge(&mut self, home_idx: usize, dependency_idx: usize) {
+        self.edges.push((home_idx, dependency_idx));
     }
 
     fn process(
@@ -329,5 +368,29 @@ impl Graph {
         }
 
         Ok(())
+    }
+
+    #[must_use]
+    pub fn find_node(&self, id: &NodeId) -> Option<(usize, &Node)> {
+        self.nodes.iter().enumerate().find(|pair| {
+            let node = pair.1;
+
+            match &id {
+                NodeId::Attrname(attrname) => node
+                    .derivation
+                    .as_ref()
+                    .is_some_and(|name| attrname == name),
+                NodeId::Path(path) => node.path == *path,
+            }
+        })
+    }
+
+    #[must_use]
+    pub fn find_dependencies_of(&self, idx: usize) -> HashMap<usize, &Node> {
+        let mut dependencies = HashMap::new();
+
+        set_dependencies_r(&mut dependencies, &mut HashSet::default(), self, idx);
+
+        dependencies
     }
 }

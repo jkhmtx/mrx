@@ -1,7 +1,19 @@
-use std::path::PathBuf;
+use std::{
+    fs::File,
+    os::unix::fs::MetadataExt,
+    path::{
+        Path,
+        PathBuf,
+    },
+};
 
 use mrx_utils::{
+    Attrname,
     Config,
+    graph::{
+        Graph,
+        NodeId,
+    },
     nix_build_command::{
         NixBuildCommand,
         NixBuildError,
@@ -9,7 +21,13 @@ use mrx_utils::{
 };
 use thiserror::Error;
 
-use crate::Options;
+use crate::{
+    Options,
+    get_mtime,
+    set_alias_mtime,
+    set_node_mtime,
+    time::Time,
+};
 
 #[derive(Debug, Error)]
 pub enum CacheError {
@@ -31,16 +49,28 @@ type CacheResult<T> = Result<T, CacheError>;
 /// TODO
 /// # Panics
 /// TODO
-pub fn cache(config: &Config, options: &Options) -> CacheResult<()> {
-    let derivations = options
-        .derivations
-        .iter()
-        .map(|drv| format!("#{drv}"))
-        .collect::<Vec<_>>();
-
-    if derivations.is_empty() {
+pub async fn cache(config: &Config, options: &Options) -> CacheResult<()> {
+    if options.derivations.is_empty() {
         return Err(CacheError::NoDerivations);
     }
+
+    let graph = Graph::new(config).or(Err(CacheError::Todo))?;
+
+    let mut derivations = vec![];
+
+    for derivation in &options.derivations {
+        let id = NodeId::Attrname(Attrname(derivation.clone()));
+        if is_stale(&graph, id).await {
+            dbg!(derivation);
+            derivations.push(format!("#{derivation}"));
+        }
+    }
+
+    if derivations.is_empty() {
+        return Ok(());
+    }
+
+    eprintln!("Rebuilding {}", &derivations.join(" "));
 
     let build_command = config
         .get_entrypoint()
@@ -87,4 +117,59 @@ pub fn cache(config: &Config, options: &Options) -> CacheResult<()> {
     }
 
     Ok(())
+}
+
+fn get_file_mtime(path: &Path) -> Time {
+    File::open(path)
+        .ok()
+        .and_then(|file| {
+            file.metadata()
+                .ok()
+                .map(|metadata| metadata.mtime())
+                .and_then(Time::from_timestamp_secs)
+        })
+        .unwrap_or_default()
+}
+
+async fn is_stale(graph: &Graph, id: NodeId) -> bool {
+    if let Some((idx, node)) = graph.find_node(&id) {
+        let mtime = get_mtime(NodeId::Path(node.path.clone()))
+            .await
+            .ok()
+            .flatten();
+
+        let file_mtime = get_file_mtime(node.path.as_path());
+        let stale = mtime.is_none_or(|mtime| file_mtime > mtime);
+
+        if stale {
+            if let Some(attrname) = &node.derivation {
+                set_alias_mtime(attrname, &node.path, &file_mtime)
+                    .await
+                    .unwrap();
+            } else {
+                let _ = set_node_mtime(&node.path, &file_mtime).await.unwrap();
+            }
+        }
+
+        let dependencies = graph.find_dependencies_of(idx);
+
+        let ids = dependencies.values().map(|node| {
+            node.derivation.as_ref().map_or_else(
+                || NodeId::Path(node.path.clone()),
+                |drv| NodeId::Attrname(Attrname(drv.to_string())),
+            )
+        });
+
+        let mut has_stale_children = false;
+
+        for id in ids {
+            let stale = Box::pin(is_stale(graph, id)).await;
+
+            has_stale_children = has_stale_children || stale;
+        }
+
+        stale || has_stale_children
+    } else {
+        false
+    }
 }

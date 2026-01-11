@@ -7,6 +7,7 @@ pub mod fs;
 pub mod graph;
 pub mod nix_build_command;
 
+pub use attr::Attrname;
 pub use attr::PathAttrset;
 pub use build_and_symlink::build_and_symlink;
 pub use config::{
