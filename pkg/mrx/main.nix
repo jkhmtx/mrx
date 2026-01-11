@@ -21,13 +21,13 @@
     pname = "mrx";
     version = "0.0.1";
 
-    nativeBuildInputs = [
-      nixpkgs.pkg-config
-    ];
-
-    buildInputs = [
-      nixpkgs.openssl
-    ];
+    # nativeBuildInputs = [
+    #   nixpkgs.pkg-config
+    # ];
+    #
+    # buildInputs = [
+    #   nixpkgs.openssl
+    # ];
 
     # No tests!
     doCheck = false;
