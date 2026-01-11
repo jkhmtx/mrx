@@ -6,6 +6,8 @@ edition = "2024"
 [dependencies]
 clap = { version = "4.5.53", features = ["derive"] }
 mrx-utils = { path = "../mrx-utils" }
+sqlx = { version = "0.8.6", features = ["chrono", "runtime-tokio", "sqlite"] }
+tokio = { version = "1.49.0", features = ["macros", "rt", "rt-multi-thread"] }
 thiserror = "2.0.17"
 
 [lints]

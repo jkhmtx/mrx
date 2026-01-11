@@ -27,6 +27,7 @@
   pkg.mrx = ./pkg/mrx/main.nix;
   pkg.mrx-upstream = ./pkg/mrx-upstream/main.nix;
   pkg.rust = ./pkg/rust/main.nix;
+  pkg.sqlx = ./pkg/sqlx/main.nix;
   prepare = ./scripts/bin/prepare/main.nix;
   shell = ./shell/main.nix;
   test-e2e = ./scripts/bin/test-e2e/main.nix;
