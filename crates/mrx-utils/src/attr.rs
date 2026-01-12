@@ -97,6 +97,7 @@ impl TryFrom<String> for Attrname {
 }
 
 impl Attrname {
+    #[must_use]
     pub fn is_internal(&self) -> bool {
         self.starts_with("_.mrx")
     }

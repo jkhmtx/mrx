@@ -14,17 +14,18 @@ use crate::cli::{
     Plumbing,
 };
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let (config, options) = Mrx::args().unwrap();
 
-    if let Err(e) = handle(config, options) {
+    if let Err(e) = handle(config, options).await {
         eprintln!("{}", e);
 
         std::process::exit(1);
     }
 }
 
-fn handle(config: Config, options: Mrx) -> anyhow::Result<()> {
+async fn handle(config: Config, options: Mrx) -> anyhow::Result<()> {
     match options.command {
         MrxCommand::Build(opts) => build(&config, &opts).map(|paths| {
             for p in paths.into_iter() {
@@ -32,7 +33,7 @@ fn handle(config: Config, options: Mrx) -> anyhow::Result<()> {
             }
         })?,
         MrxCommand::Plumbing(opts) => match opts {
-            Plumbing::Cache(opts) => cache(&config, &opts)?,
+            Plumbing::Cache(opts) => cache(&config, &opts).await?,
         },
         MrxCommand::Generate(opts) => generate(&config, &opts)?,
         MrxCommand::Hook(opts) => hook(&config, &opts),

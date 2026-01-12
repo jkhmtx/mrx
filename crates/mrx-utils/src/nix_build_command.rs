@@ -72,7 +72,7 @@ impl NixBuildCommand<'_> {
     /// # Panics
     /// TODO
     pub fn execute(self) -> Result<Vec<NixBuildOutput>, NixBuildError> {
-        let mut args: Vec<String> = ["build", "--json", "--no-link"]
+        let mut args: Vec<String> = ["build", "--no-warn-dirty", "--json", "--no-link"]
             .into_iter()
             .map(ToString::to_string)
             .collect();

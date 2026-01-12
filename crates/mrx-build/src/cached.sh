@@ -15,9 +15,7 @@ else
 	mrx_bin="${THIS_MRX_BIN}"
 fi
 
-if ! test -f "${cached_bin}"; then
-	"${mrx_bin}" plumbing cache "${DERIVATION}"
-fi
+"${mrx_bin}" plumbing cache "${DERIVATION}"
 
 if test -f "${cached_bin}" && bash -n "${cached_bin}"; then
 	"${cached_bin}" "${@}"
