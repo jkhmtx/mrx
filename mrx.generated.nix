@@ -1,7 +1,9 @@
 {
   build-and-test = ./scripts/bin/build-and-test/main.nix;
   check = ./scripts/bin/check/main.nix;
-  dev.reset-db = ./scripts/bin/dev/reset-db/main.nix;
+  dev.db.dump = ./scripts/bin/dev/db/dump/main.nix;
+  dev.db.query = ./scripts/bin/dev/db/query/main.nix;
+  dev.db.reset = ./scripts/bin/dev/db/reset/main.nix;
   dev.run = ./scripts/bin/dev/run/main.nix;
   fix = ./scripts/bin/fix/main.nix;
   format = ./scripts/bin/format/main.nix;

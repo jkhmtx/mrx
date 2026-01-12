@@ -145,3 +145,70 @@ ON CONFLICT (alias)
 
     Ok(())
 }
+
+#[derive(Debug, FromRow)]
+struct StoreQueryRow {
+    store_path: String,
+}
+
+/// # Errors
+/// TODO
+pub async fn get_store_bin_path(alias: &Attrname) -> Result<Option<String>, DbError> {
+    let alias = alias.to_string();
+
+    let connection = get_connection().await?;
+
+    let row = sqlx::query_as!(
+        StoreQueryRow,
+        r#"
+SELECT
+    store_path
+FROM
+    store
+    JOIN alias ON alias.id = store.alias_id
+WHERE
+    alias.alias = ?
+            "#,
+        alias
+    )
+    .fetch_optional(&connection)
+    .await
+    .map_err(DbError::Query)?;
+
+    Ok(row.map(|row| row.store_path))
+}
+
+/// # Errors
+/// TODO
+pub async fn write_store(
+    alias: &Attrname,
+    store_path: &AbsoluteFilePathBuf,
+) -> Result<(), DbError> {
+    let path = store_path.to_string();
+    let alias = alias.to_string();
+
+    let connection = get_connection().await?;
+
+    sqlx::query!(
+        r#"
+INSERT INTO store (alias_id, store_path)
+    VALUES ((
+            SELECT
+                id
+            FROM
+                alias
+            WHERE
+                alias = ?1),
+            ?2)
+ON CONFLICT(alias_id) 
+DO UPDATE SET store_path = excluded.store_path;
+            "#,
+        alias,
+        path
+    )
+    .fetch_optional(&connection)
+    .await
+    .map_err(DbError::Query)?;
+
+    Ok(())
+}

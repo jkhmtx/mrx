@@ -1,6 +1,7 @@
 mod build;
 mod cli;
 mod nix_build_output;
+mod run;
 
-pub use build::build;
 pub use cli::Options;
+pub use run::run;

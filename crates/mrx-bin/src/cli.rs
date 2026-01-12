@@ -6,7 +6,6 @@ use mrx_build::Options as BuildOptions;
 use mrx_cache::Options as CacheOptions;
 use mrx_generate::Options as GenerateOptions;
 use mrx_hook::Options as HookOptions;
-use mrx_refresh::Options as RefreshOptions;
 use mrx_show::Options as ShowOptions;
 use mrx_utils::{
     MrxCli,
@@ -24,7 +23,6 @@ pub enum MrxCommand {
     Build(BuildOptions),
     Generate(GenerateOptions),
     Hook(HookOptions),
-    Refresh(RefreshOptions),
     Show(ShowOptions),
     #[command(subcommand)]
     Plumbing(Plumbing),

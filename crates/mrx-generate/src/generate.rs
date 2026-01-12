@@ -15,7 +15,7 @@ use thiserror::Error;
 use crate::Options;
 
 #[derive(Debug, Error)]
-pub enum GenerateError {
+pub(crate) enum GenerateError {
     #[error("invalid destination `{0}`")]
     InvalidDestination(String),
     #[error("Could not create file")]
@@ -102,7 +102,7 @@ fn write_name_files(attrset: &PathAttrset) -> GenerateResult<()> {
 /// TODO
 /// # Panics
 /// TODO
-pub fn generate(config: &Config, _options: &Options) -> GenerateResult<()> {
+pub(crate) fn generate(config: &Config, _options: &Options) -> GenerateResult<()> {
     let attrset = find_nix_path_attrset(config);
 
     write_barrel_file(config, &attrset)?;

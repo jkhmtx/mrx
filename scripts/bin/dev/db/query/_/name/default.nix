@@ -1,2 +1,2 @@
 # GENERATED CODE
-"_.dev.reset-db"
+"_.dev.db.query"

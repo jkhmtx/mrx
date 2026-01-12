@@ -14,7 +14,6 @@ mrx-build = { path = "../mrx-build" }
 mrx-cache = { path = "../mrx-cache" }
 mrx-generate = { path = "../mrx-generate" }
 mrx-hook = { path = "../mrx-hook" }
-mrx-refresh = { path = "../mrx-refresh" }
 mrx-show = { path = "../mrx-show" }
 mrx-utils = { path = "../mrx-utils" }
 anyhow = "1.0.100"

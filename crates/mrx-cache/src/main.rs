@@ -2,7 +2,7 @@ use chrono as _;
 use clap as _;
 use mrx_cache::{
     Options,
-    cache,
+    run,
 };
 use mrx_utils as _;
 use sqlx as _;
@@ -13,5 +13,5 @@ use tokio as _;
 async fn main() {
     let (config, options) = Options::args().unwrap();
 
-    cache(&config, &options).await.unwrap();
+    run(&config, &options).await;
 }

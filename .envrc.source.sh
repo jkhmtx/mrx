@@ -55,8 +55,6 @@ rm "${watch_files_lst}"
 
 watch_file "${watch_files[@]}"
 
-mrx refresh
-
 mrx hook >&2
 
 rustc_path="$(realpath "$(nix path-info '#_.shell')"/bin/rustc)"
