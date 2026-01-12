@@ -10,9 +10,5 @@ nixpkgs.writeShellApplication {
     _.dev.db.query
   ];
 
-  runtimeEnv = {
-    QUERY = _.dev.db.query.name;
-  };
-
   text = builtins.readFile ./run.sh;
 }

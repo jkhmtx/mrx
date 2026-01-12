@@ -1,5 +1,3 @@
 # shellcheck shell=bash
 
-export QUERY="${QUERY}"
-
-"${QUERY}" .dump
+_.dev.db.query .dump

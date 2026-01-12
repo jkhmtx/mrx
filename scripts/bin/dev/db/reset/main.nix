@@ -7,7 +7,7 @@ nixpkgs.writeShellApplication {
   name = import _/name;
 
   runtimeInputs = [
-    _.migrations.apply
+    _.lib.migrations.apply
   ];
 
   text = builtins.readFile ./run.sh;

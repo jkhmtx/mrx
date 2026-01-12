@@ -37,7 +37,6 @@
 
     pathAttrImports = {
       _ = import ./mrx.generated.nix;
-      infallible = import ./infallible.nix;
     };
 
     systems = mapSystems ["aarch64-darwin" "x86_64-linux"];
