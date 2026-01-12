@@ -17,15 +17,13 @@ use thiserror::Error;
 use crate::cli::Options;
 
 #[derive(Debug, Error)]
-pub enum BuildError {
+pub(crate) enum BuildError {
     #[error("No entrypoint 'flake.nix' or 'default.nix' found")]
     NoEntrypoint,
     #[error(transparent)]
     Build(#[from] NixBuildError),
     #[error("Writing cache failed: {0}")]
     Cache(#[from] std::io::Error),
-    #[error("{0}")]
-    Failed(String),
     #[error("TODO: {0}")]
     Todo(&'static str),
 }
@@ -37,12 +35,6 @@ fn reset_bin_dir(bin_dir: &Path) -> BuildResult<()> {
 }
 
 fn write_bin_dir(bin_dir: &Path, config: &Config) -> BuildResult<()> {
-    let cache_dir = {
-        let dir = config.state_dir();
-
-        dir.join("cache")
-    };
-
     let bins = find_bin_attrnames(config);
     let cached_sh = include_str!("cached.sh");
 
@@ -56,9 +48,8 @@ fn write_bin_dir(bin_dir: &Path, config: &Config) -> BuildResult<()> {
                 std::env::current_exe().map_err(|_| BuildError::Todo("current_exe"))?;
 
             let env_vars = [
-                ("THIS_MRX_BIN", this_mrx_bin.to_string_lossy()),
-                ("DERIVATION", bin.to_string().into()),
-                ("CACHE_DIR", cache_dir.to_string_lossy()),
+                ("__MRX_DERIVATION", bin.to_string().into()),
+                ("__MRX_THIS_MRX_BIN", this_mrx_bin.to_string_lossy()),
             ];
 
             for (k, v) in env_vars {
@@ -85,7 +76,7 @@ fn write_bin_dir(bin_dir: &Path, config: &Config) -> BuildResult<()> {
 /// TODO
 /// # Panics
 /// TODO
-pub fn build(config: &Config, options: &Options) -> BuildResult<Vec<String>> {
+pub(crate) fn build(config: &Config, options: &Options) -> BuildResult<Vec<String>> {
     let installables = config.get_installables();
 
     let build_command = config

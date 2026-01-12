@@ -3,10 +3,11 @@ use tokio as _;
 mod cache;
 mod cli;
 mod db;
+mod run;
 mod time;
 
-pub use cache::cache;
 use chrono as _;
 pub use cli::Options;
 pub use db::*;
+pub use run::run;
 use tokio as _;

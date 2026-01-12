@@ -1,25 +1,22 @@
 # shellcheck shell=bash
 
-export CACHE_DIR="${CACHE_DIR}"
-export DERIVATION="${DERIVATION}"
-export THIS_MRX_BIN="${THIS_MRX_BIN}"
+export __MRX_DERIVATION="${__MRX_DERIVATION}"
+export __MRX_THIS_MRX_BIN="${__MRX_THIS_MRX_BIN}"
 
-cached_bin="${CACHE_DIR}"/"${DERIVATION}"
-
-# If 'mrx' is not in the PATH, substitute it with the one
-# that writes this script file
+# If 'THIS_MRX_BIN' does not exist, try to substitute it with the one in PATH
 mrx_bin=
-if type -p mrx >/dev/null 2>&1; then
-	mrx_bin=mrx
+if test -s "${__MRX_THIS_MRX_BIN}"; then
+	mrx_bin="${__MRX_THIS_MRX_BIN}"
 else
-	mrx_bin="${THIS_MRX_BIN}"
+	mrx_bin=mrx
 fi
 
-"${mrx_bin}" plumbing cache "${DERIVATION}"
+if ! type "${mrx_bin}" >/dev/null 2>&1; then
+	echo "ERROR: 'mrx' not found. Run 'mrx build', then try again."
 
-if test -f "${cached_bin}" && bash -n "${cached_bin}"; then
-	"${cached_bin}" "${@}"
-else
-	echo "ERR: mrx failed to build the derivation '${DERIVATION}'"
 	exit 1
 fi
+
+bin="$("${mrx_bin}" plumbing cache "${__MRX_DERIVATION}")"
+
+exec "${bin}" "${@}"

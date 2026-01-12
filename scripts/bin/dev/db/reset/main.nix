@@ -10,5 +10,5 @@ nixpkgs.writeShellApplication {
     _.migrations.apply
   ];
 
-  text = ./run.sh;
+  text = builtins.readFile ./run.sh;
 }

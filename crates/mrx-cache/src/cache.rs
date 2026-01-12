@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs::File,
     os::unix::fs::MetadataExt,
     path::{
@@ -10,6 +11,7 @@ use std::{
 use mrx_utils::{
     Attrname,
     Config,
+    fs::AbsoluteFilePathBuf,
     graph::{
         Graph,
         NodeId,
@@ -24,21 +26,21 @@ use thiserror::Error;
 use crate::{
     Options,
     get_mtime,
+    get_store_bin_path,
     set_alias_mtime,
     set_node_mtime,
     time::Time,
+    write_store,
 };
 
 #[derive(Debug, Error)]
-pub enum CacheError {
+pub(crate) enum CacheError {
     #[error("No derivations provided. Provide at least one as a positional argument.")]
     NoDerivations,
     #[error("No fallback entrypoint 'flake.nix' or 'default.nix' found")]
     NoEntrypoint,
     #[error(transparent)]
     Build(#[from] NixBuildError),
-    #[error("{0}: {1} (Path: {2:?})")]
-    Io(&'static str, std::io::Error, Option<PathBuf>),
     #[error("TODO")]
     Todo,
 }
@@ -49,74 +51,88 @@ type CacheResult<T> = Result<T, CacheError>;
 /// TODO
 /// # Panics
 /// TODO
-pub async fn cache(config: &Config, options: &Options) -> CacheResult<()> {
+pub(crate) async fn cache(config: &Config, options: &Options) -> CacheResult<Vec<String>> {
     if options.derivations.is_empty() {
         return Err(CacheError::NoDerivations);
     }
 
     let graph = Graph::new(config).or(Err(CacheError::Todo))?;
 
-    let mut derivations = vec![];
+    let attrnames = options
+        .derivations
+        .iter()
+        .cloned()
+        .map(Attrname)
+        .collect::<Vec<_>>();
 
-    for derivation in &options.derivations {
-        let id = NodeId::Attrname(Attrname(derivation.clone()));
+    let mut stale = vec![];
+
+    for attrname in &attrnames {
+        let id = NodeId::Attrname(attrname.clone());
         if is_stale(&graph, id).await {
-            dbg!(derivation);
-            derivations.push(format!("#{derivation}"));
+            stale.push(attrname);
         }
     }
 
-    if derivations.is_empty() {
-        return Ok(());
+    if stale.is_empty() {
+        let mut binpaths = vec![];
+        for attrname in &attrnames {
+            if let Some(path) = get_store_bin_path(attrname)
+                .await
+                .map_err(|_| CacheError::Todo)?
+            {
+                binpaths.push(path);
+            }
+        }
+
+        if !binpaths.is_empty() {
+            return Ok(binpaths);
+        }
     }
 
-    eprintln!("Rebuilding {}", &derivations.join(" "));
+    let derivation_build_strings = stale
+        .iter()
+        .map(|attrname| format!("#{attrname}"))
+        .collect::<Vec<_>>();
+
+    eprintln!("Rebuilding {}", &derivation_build_strings.join(" "));
 
     let build_command = config
         .get_entrypoint()
-        .map(|entrypoint| NixBuildCommand::new(entrypoint, &derivations))
+        .map(|entrypoint| NixBuildCommand::new(entrypoint, &derivation_build_strings))
         .ok_or(CacheError::NoEntrypoint)?;
 
-    let cache_dir = {
-        let dir = config.state_dir();
-
-        dir.join("cache")
-    };
-    mrx_utils::fs::mk_dir(&cache_dir)
-        .map_err(|e| CacheError::Io("Failed to make directory:", e, Some(cache_dir.clone())))?;
-
-    for path in build_command
+    let bin_paths = build_command
         .execute()?
         .into_iter()
         .filter_map(|output| output.out)
-    {
-        let derivation = path
-            .split_once('-')
-            .map(|(_, derivation)| derivation)
-            .expect("derivation outpath should follow the form '/nix/store/123abc-[derivation]'");
+        .map(|path| {
+            let derivation = path
+                .split_once('-')
+                .map(|(_, derivation)| derivation)
+                .expect(
+                    "derivation outpath should follow the form '/nix/store/123abc-[derivation]'",
+                );
 
-        let path = PathBuf::from(&path);
+            (
+                Attrname(derivation.to_string()),
+                PathBuf::from(&path).join("bin").join(derivation),
+            )
+        })
+        .collect::<HashMap<_, _>>();
 
-        std::fs::remove_file(cache_dir.join(derivation)).or_else(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                Ok(())
-            } else {
-                Err(CacheError::Io(
-                    "Failed to remove file:",
-                    e,
-                    Some(cache_dir.join(derivation).clone()),
-                ))
-            }
-        })?;
-
-        std::os::unix::fs::symlink(
-            path.join("bin").join(derivation),
-            cache_dir.join(derivation),
-        )
-        .map_err(|e| CacheError::Io("Failed to symlink:", e, None))?;
+    for (alias, store_path) in &bin_paths {
+        let store_path =
+            AbsoluteFilePathBuf::try_from(store_path.as_path()).map_err(|_| CacheError::Todo)?;
+        write_store(alias, &store_path)
+            .await
+            .map_err(|_| CacheError::Todo)?;
     }
 
-    Ok(())
+    Ok(bin_paths
+        .values()
+        .map(|store_path| store_path.to_string_lossy().to_string())
+        .collect())
 }
 
 fn get_file_mtime(path: &Path) -> Time {

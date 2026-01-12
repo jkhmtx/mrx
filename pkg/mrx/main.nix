@@ -16,8 +16,8 @@
     "^Cargo\.lock$"
     ".*Cargo\.toml"
   ];
-
-  package = rustPlatform.buildRustPackage {
+in
+  rustPlatform.buildRustPackage {
     pname = "mrx";
     version = "0.0.1";
 
@@ -49,19 +49,4 @@
       license = nixpkgs.lib.licenses.unlicense;
       maintainers = ["jakehamtexas@gmail.com"];
     };
-  };
-in
-  nixpkgs.writeShellApplication {
-    name = "mrx";
-    runtimeInputs = [
-      _.lib.handle-stale-dependency-graph-nodes
-      package
-    ];
-
-    runtimeEnv = {
-      HANDLE_STALE_DEPENDENCY_GRAPH_NODES = _.lib.handle-stale-dependency-graph-nodes.name;
-      #######
-      PACKAGE = package.pname;
-    };
-    text = builtins.readFile ./run.sh;
   }

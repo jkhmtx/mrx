@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\nINSERT INTO store (alias_id, store_path)\n    VALUES ((\n            SELECT\n                id\n            FROM\n                alias\n            WHERE\n                alias = ?1),\n            ?2)\nON CONFLICT(alias_id) \nDO UPDATE SET store_path = excluded.store_path;\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "0c4db142198f9b1216e8ee9b22327136620ad72be0bae3f4253fe9ebad425b46"
+}

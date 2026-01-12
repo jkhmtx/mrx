@@ -4,7 +4,7 @@ use mrx_utils::{
     mrx_cli,
 };
 
-/// Build and symlink derivations
+/// Build and run derivations, caching the result of the build for fast recall
 #[mrx_cli]
 #[derive(Parser, MrxCli, Debug)]
 pub struct Options {

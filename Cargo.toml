@@ -7,7 +7,6 @@ members = [
   "crates/mrx-cache",
   "crates/mrx-generate",
   "crates/mrx-hook",
-  "crates/mrx-refresh",
   "crates/mrx-show",
   "xtask",
 ]

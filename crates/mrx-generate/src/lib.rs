@@ -1,5 +1,6 @@
 mod cli;
 mod generate;
+mod run;
 
 pub use cli::Options;
-pub use generate::generate;
+pub use run::run;
