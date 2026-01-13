@@ -1,17 +1,16 @@
 - build(mrx/package): package binaries individually
 - build(mrx/package): static binaries
+- chore(mrx/core): improve MissingNode error experience
 - docs(docs): Nice README
 - docs(mrx/api): "how to use" for each binary command
-- docs(mrx/api): Generate manpages from extended clap documentation
 - docs(mrx/api): document public APIs properly
+- docs(mrx/api): Generate manpages from extended clap documentation
 - docs(nix/api): document public APIs properly
 - feat(mrx/api): `mrx status` - Show "needs rebuild" information
 - feat(mrx/api/checkhealth): `mrx checkhealth` - Show pending or broken setup information
 - feat(mrx/api/generate): `mrx generate --check` - Show a summary of "needs generate" and exit 1 if any found
 - feat(mrx/api/init): `mrx init` - Setup wizard
-- feat(mrx/core): `mrx build` should do proper work skipping
 - feat(mrx/core): create a project workspaces convention
-- feat(nix/api/gen/ci): GHA generator utils (MVP) - unopinionated (just basic tools for composing action jobs from derivations, steps as nix -> yaml)
 - feat(nix/api/gen/ci): GHA generator utils (enhanced) - extra, informed by dependency graph
+- feat(nix/api/gen/ci): GHA generator utils (MVP) - unopinionated (just basic tools for composing action jobs from derivations, steps as nix -> yaml)
 - feat(nix/api/run): `_.mrx.run.parallel`: given a list of apps, run each app in parallel
-- refactor(mrx/core): rust ports

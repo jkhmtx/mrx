@@ -11,21 +11,13 @@
   format-rust = ./scripts/bin/format-rust/main.nix;
   format-shell = ./scripts/bin/format-shell/main.nix;
   format-yaml = ./scripts/bin/format-yaml/main.nix;
-  lib.build-and-symlink-derivations = ./scripts/lib/build-and-symlink-derivations/main.nix;
-  lib.find-dependency-graph-edges = ./scripts/lib/find-dependency-graph-edges/main.nix;
-  lib.find-generated-nix-raw-attrset = ./scripts/lib/find-generated-nix-raw-attrset/main.nix;
-  lib.find-stale-dependency-graph-nodes = ./scripts/lib/find-stale-dependency-graph-nodes/main.nix;
-  lib.generate-ignore-patterns-file = ./scripts/lib/generate-ignore-patterns-file/main.nix;
-  lib.get-config-value = ./scripts/lib/get-config-value/main.nix;
-  lib.handle-stale-dependency-graph-nodes = ./scripts/lib/handle-stale-dependency-graph-nodes/main.nix;
-  lib.mtime-database = ./scripts/lib/mtime-database/main.nix;
+  lib.migrations.apply = ./scripts/lib/migrations/apply/main.nix;
   lint = ./scripts/bin/lint/main.nix;
   lint-commit = ./scripts/bin/lint-commit/main.nix;
   lint-github-actions = ./scripts/bin/lint-github-actions/main.nix;
   lint-rust = ./scripts/bin/lint-rust/main.nix;
   lint-shell = ./scripts/bin/lint-shell/main.nix;
   local-ci = ./scripts/bin/local-ci/main.nix;
-  migrations.apply = ./scripts/bin/migrations/apply/main.nix;
   pkg.mrx = ./pkg/mrx/main.nix;
   pkg.mrx-upstream = ./pkg/mrx-upstream/main.nix;
   pkg.rust = ./pkg/rust/main.nix;
@@ -33,5 +25,4 @@
   prepare = ./scripts/bin/prepare/main.nix;
   shell = ./shell/main.nix;
   test-e2e = ./scripts/bin/test-e2e/main.nix;
-  util.with-tee = ./scripts/util/with-tee/main.nix;
 }
