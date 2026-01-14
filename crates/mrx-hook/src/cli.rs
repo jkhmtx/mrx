@@ -6,5 +6,5 @@ use mrx_utils::{
 
 /// Print the post-build shell hook
 #[mrx_cli]
-#[derive(Parser, MrxCli, Debug)]
+#[derive(Parser, MrxCli, Debug, Default)]
 pub struct Options {}

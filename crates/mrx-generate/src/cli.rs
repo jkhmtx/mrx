@@ -6,5 +6,5 @@ use mrx_utils::{
 
 /// Generate the project's barrel file
 #[mrx_cli]
-#[derive(Parser, MrxCli, Debug)]
+#[derive(Parser, MrxCli, Debug, Default)]
 pub struct Options {}

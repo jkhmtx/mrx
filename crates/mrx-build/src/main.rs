@@ -3,6 +3,8 @@ use mrx_build::{
     Options,
     run,
 };
+use mrx_generate as _;
+use mrx_hook as _;
 use mrx_utils as _;
 use thiserror as _;
 

@@ -23,6 +23,7 @@
   pkg.rust = ./pkg/rust/main.nix;
   pkg.sqlx = ./pkg/sqlx/main.nix;
   prepare = ./scripts/bin/prepare/main.nix;
+  print-rust-src-path = ./scripts/bin/print-rust-src-path/main.nix;
   shell = ./shell/main.nix;
   test-e2e = ./scripts/bin/test-e2e/main.nix;
 }

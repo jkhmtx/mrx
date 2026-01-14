@@ -38,11 +38,17 @@ pub struct GraphOptions {
     pub kind: GraphKind,
 }
 
-#[derive(Subcommand, Clone, Copy, Debug)]
+#[derive(Parser, Clone, Debug)]
+pub struct WatchFilesOptions {
+    /// The derivations to find dependencies for. Leave blank to show all files in the dependency graph (according to the entrypoint defined in configuration, or the default).
+    pub derivations: Vec<String>,
+}
+
+#[derive(Subcommand, Clone, Debug)]
 pub enum Target {
     /// Watch files are nodes in the dependency graph.
     /// These files may be consumed by another program, such as 'direnv' or 'entr', to signal that "on files changed" work needs to be done.
-    WatchFiles,
+    WatchFiles(WatchFilesOptions),
     /// Dependency graph of the build system
     Graph(GraphOptions),
 }

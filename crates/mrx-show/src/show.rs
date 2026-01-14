@@ -8,8 +8,14 @@ use crate::{
 };
 
 pub(crate) fn show(config: &Config, options: &Options) {
-    match options.target {
-        Target::WatchFiles => watch_files::watch_files(config),
-        Target::Graph(graph) => graph::graph(config, graph),
+    match &options.target {
+        Target::WatchFiles(watch) => {
+            let files = watch_files::watch_files(config, watch);
+
+            for file in &files {
+                println!("{file}");
+            }
+        }
+        Target::Graph(graph) => graph::graph(config, *graph),
     }
 }
