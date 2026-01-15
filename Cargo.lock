@@ -1118,6 +1118,8 @@ name = "mrx-build"
 version = "0.1.0"
 dependencies = [
  "clap",
+ "mrx-generate",
+ "mrx-hook",
  "mrx-utils",
  "thiserror 2.0.17",
 ]

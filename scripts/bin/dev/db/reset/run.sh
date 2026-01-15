@@ -8,4 +8,4 @@ dir="$(dirname "${dev_db}")"
 mkdir -p "${dir}"
 
 rm "${dev_db}" >/dev/null 2>&1 || true
-_.migrations.apply "${dev_db}"
+_.lib.migrations.apply "${dev_db}"

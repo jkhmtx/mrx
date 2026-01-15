@@ -8,8 +8,8 @@ use crate::{
 pub fn run(config: &Config, options: &Options) {
     let bins = hook(config, options);
 
-    println!("The following commands are available in your shell:");
+    eprintln!("The following commands are available in your shell:");
     for bin in bins {
-        println!("  {bin}");
+        eprintln!("  {bin}");
     }
 }

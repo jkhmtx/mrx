@@ -77,6 +77,10 @@ fn write_bin_dir(bin_dir: &Path, config: &Config) -> BuildResult<()> {
 /// # Panics
 /// TODO
 pub(crate) fn build(config: &Config, options: &Options) -> BuildResult<Vec<String>> {
+    if options.generate {
+        mrx_generate::run(config, &mrx_generate::Options::default());
+    }
+
     let installables = config.get_installables();
 
     let build_command = config
@@ -93,7 +97,7 @@ pub(crate) fn build(config: &Config, options: &Options) -> BuildResult<Vec<Strin
         })
         .collect::<Vec<_>>();
 
-    if options.cache {
+    if !options.skip_bin {
         let bin_dir = {
             let dir = config.state_dir();
 
@@ -109,6 +113,11 @@ pub(crate) fn build(config: &Config, options: &Options) -> BuildResult<Vec<Strin
         // implementation in [`bin_dir`].
         // This enables opting out of caching on a per-exe basis.
         paths.insert(0, bin_dir.to_string_lossy().to_string());
+    }
+
+    // If 'skip_bin', there is no hook to show because there are no bins available.
+    if options.hook && !options.skip_bin {
+        mrx_hook::run(config, &mrx_hook::Options::default());
     }
 
     Ok(paths)
