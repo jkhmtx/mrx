@@ -1,6 +1,9 @@
 use std::{
     fs,
-    path::PathBuf,
+    path::{
+        Path,
+        PathBuf,
+    },
 };
 
 use serde::Deserialize;
@@ -60,9 +63,8 @@ pub enum Entrypoint {
     File(PathBuf),
 }
 
-impl Entrypoint {
-    #[must_use]
-    pub fn as_path(&self) -> &PathBuf {
+impl AsRef<Path> for Entrypoint {
+    fn as_ref(&self) -> &Path {
         match self {
             Self::Flake(path) | Self::File(path) => path,
         }
@@ -104,7 +106,7 @@ impl Config {
         self.path
             .parent()
             .filter(|p| p.exists())
-            .map_or_else(|| PathBuf::from("./"), std::path::Path::to_path_buf)
+            .map_or_else(|| PathBuf::from("./"), Path::to_path_buf)
     }
 
     #[must_use]

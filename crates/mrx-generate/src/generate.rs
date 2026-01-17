@@ -7,6 +7,8 @@ use mrx_utils::fs::{
 };
 use mrx_utils::{
     Config,
+    NixAst,
+    NixAstNodes,
     PathAttrset,
     find_nix_path_attrset,
 };
@@ -57,12 +59,11 @@ fn write_barrel_file(config: &Config, attrset: &PathAttrset) -> GenerateResult<(
             .into_iter()
             //
             .partition(|_| true);
-        //.partition(|name| attrset.get(name).unwrap().is_bin());
 
         for name in &root_attrnames {
-            let path = attrset.get(name).unwrap().as_path().to_string_lossy();
+            let path = attrset.get(name).unwrap().to_relative_path(&prefix)?;
             let name = name.replacen("_.", "", 1);
-            writeln!(&mut buf, "  {name} = {prefix}{path};")?;
+            writeln!(&mut buf, "  {name} = {path};")?;
         }
 
         writeln!(&mut buf, "}}")?;
@@ -79,9 +80,15 @@ fn write_barrel_file(config: &Config, attrset: &PathAttrset) -> GenerateResult<(
 }
 
 fn write_name_files(attrset: &PathAttrset) -> GenerateResult<()> {
-    for (attr_name, path_attr) in attrset.iter() {
-        let name_dir = path_attr.as_path().parent().unwrap().join("_/name");
+    let name_dir_pairs = attrset.iter().filter_map(|(name, path_attr)| {
+        NixAstNodes::new(path_attr)
+            .ok()?
+            .iter()
+            .find(|node| matches!(node, NixAst::ImportOwnNameModuleExpression))
+            .map(|_| (name, path_attr.as_path().parent().unwrap().join("_/name")))
+    });
 
+    for (attr_name, name_dir) in name_dir_pairs {
         mk_dir(&name_dir)?;
 
         let name = {
@@ -92,7 +99,14 @@ fn write_name_files(attrset: &PathAttrset) -> GenerateResult<()> {
 
             name
         };
-        std::fs::write(name_dir.join("default.nix"), name.as_bytes())?;
+        let path = name_dir.join("default.nix");
+        if let Ok(buf) = std::fs::read(&path)
+            && buf.as_slice() == name.as_bytes()
+        {
+            continue;
+        }
+
+        std::fs::write(&path, name.as_bytes())?;
     }
 
     Ok(())

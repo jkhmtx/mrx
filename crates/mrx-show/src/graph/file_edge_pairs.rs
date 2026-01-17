@@ -5,11 +5,11 @@ use mrx_utils::{
     graph::{
         Edge,
         Graph,
-        Node,
+        GraphNode,
     },
 };
 
-fn display(node: &Node, dir: &Path) -> String {
+fn display(node: &GraphNode, dir: &Path) -> String {
     node.as_path()
         .as_relative_to_parent(dir)
         .unwrap()

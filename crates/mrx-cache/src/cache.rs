@@ -1,17 +1,12 @@
 use std::{
-    collections::HashMap,
     fs::File,
     os::unix::fs::MetadataExt,
-    path::{
-        Path,
-        PathBuf,
-    },
+    path::Path,
 };
 
 use mrx_utils::{
     Attrname,
     Config,
-    fs::AbsoluteFilePathBuf,
     graph::{
         Graph,
         NodeId,
@@ -19,6 +14,14 @@ use mrx_utils::{
     nix_build_command::{
         NixBuildCommand,
         NixBuildError,
+    },
+    nix_references_command::{
+        NixReferencesCommand,
+        NixReferencesError,
+    },
+    nix_store_path::{
+        MrxNixStorePath,
+        NixStorePath,
     },
 };
 use thiserror::Error;
@@ -41,8 +44,10 @@ pub(crate) enum CacheError {
     NoEntrypoint,
     #[error(transparent)]
     Build(#[from] NixBuildError),
-    #[error("TODO")]
-    Todo,
+    #[error(transparent)]
+    References(#[from] NixReferencesError),
+    #[error("TODO: {0}")]
+    Todo(&'static str),
 }
 
 type CacheResult<T> = Result<T, CacheError>;
@@ -51,12 +56,15 @@ type CacheResult<T> = Result<T, CacheError>;
 /// TODO
 /// # Panics
 /// TODO
-pub(crate) async fn cache(config: &Config, options: &Options) -> CacheResult<Vec<String>> {
+pub(crate) async fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixStorePath>> {
     if options.derivations.is_empty() {
         return Err(CacheError::NoDerivations);
     }
 
-    let graph = Graph::new(config).or(Err(CacheError::Todo))?;
+    let graph = Graph::new(config).map_err(|e| {
+        dbg!(e);
+        CacheError::Todo("new graph")
+    })?;
 
     let attrnames = options
         .derivations
@@ -79,15 +87,15 @@ pub(crate) async fn cache(config: &Config, options: &Options) -> CacheResult<Vec
         for attrname in &attrnames {
             if let Some(path) = get_store_bin_path(attrname)
                 .await
-                .map_err(|_| CacheError::Todo)?
+                .map_err(|_| CacheError::Todo("get store bin paths"))?
             {
                 binpaths.push(path);
             }
         }
 
-        if !binpaths.is_empty() {
-            return Ok(binpaths);
-        }
+        debug_assert!(!binpaths.is_empty());
+
+        return Ok(binpaths);
     }
 
     let derivation_build_strings = stale
@@ -102,40 +110,42 @@ pub(crate) async fn cache(config: &Config, options: &Options) -> CacheResult<Vec
         .map(|entrypoint| NixBuildCommand::new(entrypoint, &derivation_build_strings))
         .ok_or(CacheError::NoEntrypoint)?;
 
-    let bin_paths = build_command
+    let out_paths = build_command
         .execute()?
         .into_iter()
         .filter_map(|output| output.out)
-        .map(|path| {
-            let derivation = path
-                .split_once('-')
-                .map(|(_, derivation)| derivation)
-                .expect(
-                    "derivation outpath should follow the form '/nix/store/123abc-[derivation]'",
-                );
+        .collect::<Vec<_>>();
 
-            (
-                Attrname(derivation.to_string()),
-                PathBuf::from(&path).join("bin").join(derivation),
-            )
-        })
-        .collect::<HashMap<_, _>>();
+    let reference_paths = NixReferencesCommand::new(out_paths.as_slice())
+        .execute()?
+        .store_paths;
 
-    for (alias, store_path) in &bin_paths {
-        let store_path =
-            AbsoluteFilePathBuf::try_from(store_path.as_path()).map_err(|_| CacheError::Todo)?;
-        write_store(alias, &store_path)
-            .await
-            .map_err(|_| CacheError::Todo)?;
+    for path in reference_paths {
+        if let Some((path, attrname)) = match path {
+            NixStorePath::MrxOutDir(MrxNixStorePath(path, ref attrname)) => {
+                Some((path + "/bin/" + attrname, attrname.clone()))
+            }
+            NixStorePath::MrxBinDir(MrxNixStorePath(path, ref attrname)) => {
+                Some((path + attrname, attrname.clone()))
+            }
+            NixStorePath::MrxExe(MrxNixStorePath(path, ref attrname)) => {
+                Some((path, attrname.clone()))
+            }
+            _ => None,
+        } {
+            write_store(attrname, NixStorePath::new(path))
+                .await
+                .map_err(|_| CacheError::Todo("mrx exe"))?;
+        }
     }
 
-    Ok(bin_paths
-        .values()
-        .map(|store_path| store_path.to_string_lossy().to_string())
+    Ok(out_paths
+        .into_iter()
+        .filter_map(NixStorePath::into_mrx_exe)
         .collect())
 }
 
-fn get_file_mtime(path: &Path) -> Time {
+fn get_file_mtime(path: impl AsRef<Path>) -> Time {
     File::open(path)
         .ok()
         .and_then(|file| {
@@ -154,7 +164,7 @@ async fn is_stale(graph: &Graph, id: NodeId) -> bool {
             .ok()
             .flatten();
 
-        let file_mtime = get_file_mtime(node.path.as_path());
+        let file_mtime = get_file_mtime(&node.path);
         let stale = mtime.is_none_or(|mtime| file_mtime > mtime);
 
         if stale {

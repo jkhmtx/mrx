@@ -3,9 +3,9 @@ use std::path::{
     PathBuf,
 };
 
-mod absolute_file_path_buf;
+mod absolute_path_buf;
 mod write_with_fallback;
-pub use absolute_file_path_buf::*;
+pub use absolute_path_buf::*;
 pub use write_with_fallback::{
     WriteWithFallbackError,
     write_with_fallback,
@@ -36,4 +36,10 @@ pub fn recreate_dir(path: &Path) -> Result<(), std::io::Error> {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => mk_dir(path),
         Err(e) => Err(e),
     }
+}
+
+pub fn is_nix(path: impl AsRef<Path>) -> bool {
+    path.as_ref()
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("nix"))
 }

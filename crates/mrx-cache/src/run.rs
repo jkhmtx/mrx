@@ -1,4 +1,7 @@
-use mrx_utils::Config;
+use mrx_utils::{
+    Config,
+    nix_store_path::NixStorePath,
+};
 
 use crate::{
     Options,
@@ -14,8 +17,8 @@ pub async fn run(config: &Config, options: &Options) {
 
             std::process::exit(1);
         }
-        Ok(strings) => {
-            for string in strings {
+        Ok(paths) => {
+            for string in paths.into_iter().map(NixStorePath::into_string) {
                 println!("{string}");
             }
         }

@@ -8,6 +8,7 @@ use mrx_utils::nix_build_command::{
     NixBuildError,
     NixBuildOutput,
 };
+use mrx_utils::nix_store_path::NixStorePath;
 use mrx_utils::{
     Config,
     find_bin_attrnames,
@@ -92,7 +93,8 @@ pub(crate) fn build(config: &Config, options: &Options) -> BuildResult<Vec<Strin
         .execute()?
         .into_iter()
         .map(|NixBuildOutput { bin, out }| {
-            bin.or(out.map(|out| format!("{out}/bin")))
+            bin.or(out.map(|path| NixStorePath::BinDir(path.into_string() + "/bin")))
+                .map(NixStorePath::into_string)
                 .expect("bin or out must be Some")
         })
         .collect::<Vec<_>>();
