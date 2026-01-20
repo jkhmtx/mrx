@@ -8,4 +8,6 @@ _.mrx.run.many {
     _.format-shell
     _.format-yaml
   ];
+
+  keepGoing = true;
 }

@@ -8,4 +8,6 @@ _.mrx.run.many {
     _.lint-rust
     _.lint-shell
   ];
+
+  keepGoing = true;
 }

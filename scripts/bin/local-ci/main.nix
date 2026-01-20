@@ -6,4 +6,6 @@ _.mrx.run.many {
     _.build-and-test
     _.check
   ];
+
+  keepGoing = true;
 }
