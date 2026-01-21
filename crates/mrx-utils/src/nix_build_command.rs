@@ -3,7 +3,10 @@ use std::io::Write as __;
 use serde::de::Error;
 use thiserror::Error;
 
-use crate::config::Entrypoint;
+use crate::{
+    config::Entrypoint,
+    nix_store_path::NixStorePath,
+};
 
 #[derive(Debug)]
 pub struct NixBuildCommand<'a> {
@@ -27,8 +30,17 @@ pub enum NixBuildError {
 
 #[derive(Debug)]
 pub struct NixBuildOutput {
-    pub bin: Option<String>,
-    pub out: Option<String>,
+    pub bin: Option<NixStorePath>,
+    pub out: Option<NixStorePath>,
+}
+
+fn get_nix_store_path(
+    value: &serde_json::map::Map<String, serde_json::Value>,
+    key: &'static str,
+) -> Option<NixStorePath> {
+    value
+        .get(key)
+        .and_then(|v| v.as_str().map(ToOwned::to_owned).map(NixStorePath::new))
 }
 
 impl TryFrom<&serde_json::Value> for NixBuildOutput {
@@ -39,18 +51,14 @@ impl TryFrom<&serde_json::Value> for NixBuildOutput {
             .and_then(|v| v.as_object())
             .ok_or(serde_json::error::Error::custom("Expected JSON object"))
             .and_then(|value| {
-                let out = value
-                    .get("out")
-                    .and_then(|v| v.as_str().map(ToOwned::to_owned));
-                let bin = value
-                    .get("bin")
-                    .and_then(|v| v.as_str().map(ToOwned::to_owned));
-
-                match (out, bin) {
+                match (
+                    get_nix_store_path(value, "bin"),
+                    get_nix_store_path(value, "out"),
+                ) {
                     (None, None) => Err(serde_json::error::Error::custom(
                         "Expected 'out' or 'bin' field",
                     )),
-                    (out, bin) => Ok(NixBuildOutput { bin, out }),
+                    (bin, out) => Ok(NixBuildOutput { bin, out }),
                 }
             })
     }

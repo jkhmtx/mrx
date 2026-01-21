@@ -1,8 +1,9 @@
 use thiserror::Error;
 
 use crate::{
+    ast::NixAstNodesError,
     attr::AttrnameError,
-    fs::AbsoluteFilePathBufError,
+    fs::AbsolutePathBufError,
 };
 
 #[derive(Debug, Error)]
@@ -13,6 +14,8 @@ pub enum GraphError {
     MissingNode(String),
     #[error("Invalid node: {0}")]
     InvalidNode(String),
+    #[error("Ast node error: {0}")]
+    AstNodeError(#[from] NixAstNodesError),
     #[error("Io error: {0}")]
     Io(#[from] std::io::Error),
 }
@@ -26,14 +29,14 @@ impl From<AttrnameError> for GraphError {
     }
 }
 
-impl From<AbsoluteFilePathBufError> for GraphError {
-    fn from(value: AbsoluteFilePathBufError) -> Self {
+impl From<AbsolutePathBufError> for GraphError {
+    fn from(value: AbsolutePathBufError) -> Self {
         match value {
-            AbsoluteFilePathBufError::Io(_, e) => Self::Io(e),
-            AbsoluteFilePathBufError::NotAFile(path) => {
+            AbsolutePathBufError::Io(_, e) => Self::Io(e),
+            AbsolutePathBufError::NotSupported(path) => {
                 Self::InvalidNode(path.to_string_lossy().to_string())
             }
-            AbsoluteFilePathBufError::NotFound(path) => {
+            AbsolutePathBufError::NotFound(path) => {
                 Self::MissingNode(path.to_string_lossy().to_string())
             }
         }

@@ -1,7 +1,7 @@
 use mrx_utils::{
     Attrname,
     Config,
-    fs::AbsoluteFilePathBuf,
+    fs::AbsolutePathBuf,
     graph::{
         Graph,
         NodeId,
@@ -13,13 +13,13 @@ use crate::cli::WatchFilesOptions;
 pub(crate) fn watch_files(config: &Config, options: &WatchFilesOptions) -> Vec<String> {
     let graph = Graph::new(config).unwrap();
     let generated_out_path =
-        AbsoluteFilePathBuf::try_from(config.get_generated_out_path().as_path()).unwrap();
+        AbsolutePathBuf::try_from(config.get_generated_out_path().as_path()).unwrap();
 
     {
         let mut files = if options.derivations.is_empty() {
             graph.to_nodes()
         } else {
-            let mut files: Vec<&AbsoluteFilePathBuf> = vec![];
+            let mut files: Vec<&AbsolutePathBuf> = vec![];
 
             for (idx, node) in options.derivations.iter().filter_map(|derivation| {
                 Attrname::try_from(derivation.as_str())

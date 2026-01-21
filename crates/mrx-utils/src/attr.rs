@@ -1,3 +1,4 @@
+use std::fmt::Write as _;
 use std::{
     collections::HashMap,
     fmt::Display,
@@ -89,7 +90,7 @@ impl TryFrom<String> for Attrname {
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         if value.starts_with("_.") {
-            Ok(Self(value))
+            Ok(Self::new(value))
         } else {
             Err(AttrnameError::Name(value))
         }
@@ -97,6 +98,21 @@ impl TryFrom<String> for Attrname {
 }
 
 impl Attrname {
+    #[must_use]
+    pub fn new(name: String) -> Self {
+        debug_assert!(
+            name.starts_with("_."),
+            "Attrname::new - name must start with '_.', got '${name}'"
+        );
+
+        Self(name)
+    }
+
+    #[must_use]
+    pub fn into_downcast(self) -> String {
+        self.0
+    }
+
     #[must_use]
     pub fn is_internal(&self) -> bool {
         self.starts_with("_.mrx")
@@ -117,9 +133,24 @@ pub struct PathAttr {
     kind: AttrKind,
 }
 
-impl PathAttr {
-    pub fn as_path(&self) -> &Path {
+impl AsRef<Path> for PathAttr {
+    fn as_ref(&self) -> &Path {
         self.path.as_path()
+    }
+}
+
+impl PathAttr {
+    pub fn to_relative_path(&self, path_prefix: &str) -> Result<String, std::fmt::Error> {
+        let mut s = String::new();
+        let path = self.path.to_string_lossy();
+
+        write!(&mut s, "{path_prefix}{path}")?;
+
+        Ok(s)
+    }
+
+    pub fn as_path(&self) -> &Path {
+        &self.path
     }
 }
 

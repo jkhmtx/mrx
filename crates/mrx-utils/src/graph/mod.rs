@@ -4,7 +4,6 @@ use std::{
         HashSet,
     },
     fmt::Debug,
-    io::ErrorKind,
     path::{
         Path,
         PathBuf,
@@ -16,155 +15,70 @@ use error::GraphError;
 
 use crate::{
     Config,
+    ast::{
+        NixAst,
+        NixAstNodes,
+        NixAstNodesError,
+    },
     attr::Attrname,
     find_nix_path_attrset,
     fs::{
-        AbsoluteFilePathBuf,
-        AbsoluteFilePathBufError,
+        AbsolutePathBuf,
+        AbsolutePathBufError,
     },
 };
 
 #[derive(Clone, Debug)]
-pub struct Node {
-    pub path: AbsoluteFilePathBuf,
+pub struct GraphNode {
+    pub path: AbsolutePathBuf,
     pub derivation: Option<Attrname>,
 }
 
-impl Node {
+impl GraphNode {
     #[must_use]
-    pub fn as_path(&self) -> &AbsoluteFilePathBuf {
+    pub fn as_path(&self) -> &AbsolutePathBuf {
         &self.path
     }
 }
 
-impl From<AbsoluteFilePathBuf> for Node {
-    fn from(path: AbsoluteFilePathBuf) -> Self {
-        Node {
+impl From<AbsolutePathBuf> for GraphNode {
+    fn from(path: AbsolutePathBuf) -> Self {
+        GraphNode {
             path,
             derivation: None,
         }
     }
 }
 
-enum NodeReferenceKind {
-    SimplePath,
-    NixDirectoryPath,
-    Derivation,
-}
-
-struct NodeReference {
-    text: String,
-    kind: NodeReferenceKind,
-}
-
-impl TryFrom<&rnix::SyntaxNode> for NodeReference {
-    type Error = ();
-
-    fn try_from(value: &rnix::SyntaxNode) -> Result<Self, Self::Error> {
-        use rnix::SyntaxKind as Kind;
-
-        match value.kind() {
-            Kind::NODE_PATH => {
-                let text = value.text();
-
-                // If the last component in a path is the character '.',
-                // it means it refers to a directory.
-                // e.g. '.', '../.'
-                let is_nix_directory_path = text
-                    .len()
-                    .checked_sub(1.into())
-                    .and_then(|idx| text.char_at(idx))
-                    .is_some_and(|c| c == '.');
-
-                if is_nix_directory_path {
-                    Some(NodeReference {
-                        text: text.to_string(),
-                        kind: NodeReferenceKind::NixDirectoryPath,
-                    })
-                } else {
-                    Some(NodeReference {
-                        text: text.to_string(),
-                        kind: NodeReferenceKind::SimplePath,
-                    })
-                }
-            }
-            Kind::NODE_SELECT if value.first_child().is_some_and(|child| child.text() == "_") => {
-                let text = value.text().to_string();
-
-                Some(NodeReference {
-                    text,
-                    kind: NodeReferenceKind::Derivation,
-                })
-            }
-            _ => None,
-        }
-        .ok_or(())
-    }
-}
-
-fn walk(node: &rnix::SyntaxNode, references: &mut Vec<NodeReference>) {
-    if let Ok(reference) = NodeReference::try_from(node) {
-        references.push(reference);
-    }
-
-    for child in node.children() {
-        walk(&child, references);
-    }
-}
-
-fn references_within(path: &AbsoluteFilePathBuf) -> Result<Vec<NodeReference>, GraphError> {
-    if !path.is_nix() {
-        return Ok(vec![]);
-    }
-
-    let file = std::fs::read(path.as_path())
-        .map_err(|e| match e.kind() {
-            ErrorKind::NotFound => GraphError::MissingNode(path.to_string_lossy().to_string()),
-            _ => GraphError::Io(e),
-        })
-        .and_then(|buf| {
-            String::from_utf8(buf)
-                .map_err(|_| GraphError::InvalidNode(path.to_string_lossy().to_string()))
-        })?;
-
-    let root = rnix::Root::parse(&file).syntax();
-    let mut references = vec![];
-    walk(&root, &mut references);
-
-    Ok(references)
-}
-
 fn get_idx_or_create_node(
     lookup: &HashMap<NodeId, usize>,
     parent: PathBuf,
-    reference: &NodeReference,
-) -> Result<Option<NodeOrIdx>, GraphError> {
-    match reference.kind {
-        NodeReferenceKind::SimplePath => {
-            let path = PathBuf::from(&reference.text);
+    node: &NixAst,
+) -> Result<Option<GraphNodeOrIdx>, GraphError> {
+    match node {
+        NixAst::ImportOwnNameModuleExpression => Ok(None),
+        NixAst::SimplePath { path } => {
+            let path = PathBuf::from(path);
 
-            let path = AbsoluteFilePathBuf::try_from_relative(&path, &parent)?;
+            let path = AbsolutePathBuf::try_from_relative(&path, &parent)?;
 
             let id = NodeId::Path(path.clone());
             if let Some(idx) = lookup.get(&id) {
-                Ok(Some(NodeOrIdx::Idx(*idx)))
+                Ok(Some(GraphNodeOrIdx::Idx(*idx)))
             } else {
-                Ok(Some(NodeOrIdx::Node(Node::from(path))))
+                Ok(Some(GraphNodeOrIdx::GraphNode(GraphNode::from(path))))
             }
         }
-        NodeReferenceKind::NixDirectoryPath => {
-            if let Some(stripped) = reference.text.strip_suffix(".") {
-                let relative =
-                    AbsoluteFilePathBuf::try_from_relative(Path::new(&stripped), &parent)?;
+        NixAst::NixDirectoryPath { path } => {
+            if let Some(stripped) = path.strip_suffix(".") {
+                let relative = AbsolutePathBuf::try_from_relative(Path::new(&stripped), &parent)?;
 
                 if relative.join("default.nix").is_file() {
                     get_idx_or_create_node(
                         lookup,
                         parent,
-                        &NodeReference {
-                            // TODO: Test case where stripped = ""
-                            text: stripped.to_string() + "default.nix",
-                            kind: NodeReferenceKind::SimplePath,
+                        &NixAst::SimplePath {
+                            path: stripped.to_string() + "default.nix",
                         },
                     )
                 } else {
@@ -174,9 +88,9 @@ fn get_idx_or_create_node(
                 Ok(None)
             }
         }
-        NodeReferenceKind::Derivation => {
-            let attrname = Attrname::try_from(reference.text.as_str())
-                .map_err(|_| GraphError::InvalidNode(reference.text.clone()))?;
+        NixAst::MrxDerivation { name } => {
+            let attrname = Attrname::try_from(name.as_str())
+                .map_err(|_| GraphError::InvalidNode(name.clone()))?;
 
             if attrname.is_internal() {
                 Ok(None)
@@ -187,7 +101,7 @@ fn get_idx_or_create_node(
                 // deleted from the dependency graph but another node still erroneously depends on it)
                 lookup.get(&id)
             } {
-                Ok(Some(NodeOrIdx::Idx(*idx)))
+                Ok(Some(GraphNodeOrIdx::Idx(*idx)))
             } else {
                 Ok(None)
             }
@@ -196,7 +110,7 @@ fn get_idx_or_create_node(
 }
 
 fn set_dependencies<'deps, 'graph>(
-    dependencies: &'deps mut HashMap<usize, &'graph Node>,
+    dependencies: &'deps mut HashMap<usize, &'graph GraphNode>,
     visited: &mut HashSet<usize>,
     graph: &'graph Graph,
     idx: usize,
@@ -222,7 +136,7 @@ where
 }
 
 fn set_dependencies_r<'graph>(
-    parents: &mut HashMap<usize, &'graph Node>,
+    parents: &mut HashMap<usize, &'graph GraphNode>,
     visited: &mut HashSet<usize>,
     graph: &'graph Graph,
     idx: usize,
@@ -235,22 +149,22 @@ fn set_dependencies_r<'graph>(
 }
 
 #[derive(Debug)]
-pub struct Edge(pub Node, pub Node);
+pub struct Edge(pub GraphNode, pub GraphNode);
 
-enum NodeOrIdx {
-    Node(Node),
+enum GraphNodeOrIdx {
+    GraphNode(GraphNode),
     Idx(usize),
 }
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum NodeId {
     Attrname(Attrname),
-    Path(AbsoluteFilePathBuf),
+    Path(AbsolutePathBuf),
 }
 
 #[derive(Debug)]
 pub struct Graph {
-    nodes: Vec<Node>,
+    nodes: Vec<GraphNode>,
     edges: Vec<(usize, usize)>,
 }
 
@@ -259,14 +173,13 @@ impl Graph {
     /// TODO
     pub fn new(config: &Config) -> Result<Self, GraphError> {
         let entrypoint = config.get_entrypoint().ok_or(GraphError::NoEntrypoint)?;
-        let path =
-            AbsoluteFilePathBuf::try_from(entrypoint.as_path().as_path()).map_err(|e| match e {
-                AbsoluteFilePathBufError::NotFound(_) => GraphError::NoEntrypoint,
-                AbsoluteFilePathBufError::NotAFile(path) => {
-                    GraphError::InvalidNode(path.to_string_lossy().to_string())
-                }
-                AbsoluteFilePathBufError::Io(_, e) => GraphError::Io(e),
-            })?;
+        let path = AbsolutePathBuf::try_from(entrypoint.as_ref()).map_err(|e| match e {
+            AbsolutePathBufError::NotFound(_) => GraphError::NoEntrypoint,
+            AbsolutePathBufError::NotSupported(path) => {
+                GraphError::InvalidNode(path.to_string_lossy().to_string())
+            }
+            AbsolutePathBufError::Io(_, e) => GraphError::Io(e),
+        })?;
 
         let mut graph = Self {
             edges: Vec::default(),
@@ -275,12 +188,12 @@ impl Graph {
 
         let mut lookup = HashMap::default();
 
-        graph.add_node(&mut lookup, Node::from(path.clone()));
+        graph.add_node(&mut lookup, GraphNode::from(path.clone()));
 
         let known_attrs = find_nix_path_attrset(config);
 
         let known_nodes = known_attrs.iter().map(|(attrname, p)| {
-            AbsoluteFilePathBuf::try_from(p).map(|path| Node {
+            AbsolutePathBuf::try_from(p).map(|path| GraphNode {
                 derivation: Some(attrname.clone()),
                 path,
             })
@@ -300,7 +213,7 @@ impl Graph {
     }
 
     #[must_use]
-    pub fn to_nodes(&self) -> Vec<&AbsoluteFilePathBuf> {
+    pub fn to_nodes(&self) -> Vec<&AbsolutePathBuf> {
         self.nodes.iter().map(|node| &node.path).collect()
     }
 
@@ -312,7 +225,7 @@ impl Graph {
             .collect()
     }
 
-    fn add_node(&mut self, lookup: &mut HashMap<NodeId, usize>, node: Node) -> usize {
+    fn add_node(&mut self, lookup: &mut HashMap<NodeId, usize>, node: GraphNode) -> usize {
         let current = self.nodes.len();
 
         if let Some(derivation) = &node.derivation {
@@ -347,23 +260,28 @@ impl Graph {
             &node.path.clone()
         };
 
-        let references = references_within(parent)?;
         visited.insert(idx);
 
-        for reference in &references {
-            match get_idx_or_create_node(lookup, parent.to_path_buf(), reference)? {
-                Some(NodeOrIdx::Idx(existing_idx)) => {
-                    self.add_edge(idx, existing_idx);
-                }
-                Some(NodeOrIdx::Node(node)) => {
-                    let curr_idx = self.nodes.len();
+        if let Some(nodes) = match NixAstNodes::new(parent) {
+            Ok(ast) => Ok(Some(ast)),
+            Err(NixAstNodesError::NotNix(_)) => Ok(None),
+            Err(e) => Err(e),
+        }? {
+            for ast_node in nodes.iter() {
+                match get_idx_or_create_node(lookup, parent.to_path_buf(), ast_node)? {
+                    Some(GraphNodeOrIdx::Idx(existing_idx)) => {
+                        self.add_edge(idx, existing_idx);
+                    }
+                    Some(GraphNodeOrIdx::GraphNode(node)) => {
+                        let curr_idx = self.nodes.len();
 
-                    self.add_edge(idx, curr_idx);
-                    self.add_node(lookup, node.clone());
+                        self.add_edge(idx, curr_idx);
+                        self.add_node(lookup, node.clone());
 
-                    self.process(lookup, visited, curr_idx)?;
+                        self.process(lookup, visited, curr_idx)?;
+                    }
+                    None => {}
                 }
-                None => {}
             }
         }
 
@@ -371,7 +289,7 @@ impl Graph {
     }
 
     #[must_use]
-    pub fn find_node(&self, id: &NodeId) -> Option<(usize, &Node)> {
+    pub fn find_node(&self, id: &NodeId) -> Option<(usize, &GraphNode)> {
         self.nodes.iter().enumerate().find(|pair| {
             let node = pair.1;
 
@@ -386,7 +304,7 @@ impl Graph {
     }
 
     #[must_use]
-    pub fn find_dependencies_of(&self, idx: usize) -> HashMap<usize, &Node> {
+    pub fn find_dependencies_of(&self, idx: usize) -> HashMap<usize, &GraphNode> {
         let mut dependencies = HashMap::new();
 
         set_dependencies_r(&mut dependencies, &mut HashSet::default(), self, idx);

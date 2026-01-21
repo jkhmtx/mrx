@@ -3,8 +3,9 @@ use std::env::VarError;
 use std::str::FromStr as _;
 
 use mrx_utils::Attrname;
-use mrx_utils::fs::AbsoluteFilePathBuf;
+use mrx_utils::fs::AbsolutePathBuf;
 use mrx_utils::graph::NodeId;
+use mrx_utils::nix_store_path::NixStorePath;
 use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::types::chrono::NaiveDateTime;
 use sqlx::{
@@ -66,7 +67,7 @@ pub async fn get_mtime(id: NodeId) -> Result<Option<Time>, DbError> {
         }
 
         NodeId::Path(path) => {
-            let path = path.as_path().to_string_lossy();
+            let path = path.to_string_lossy();
 
             sqlx::query_as!(
                 MtimeQueryRow,
@@ -91,7 +92,7 @@ struct ReturningIdInsertRow {
 
 /// # Errors
 /// TODO
-pub async fn set_node_mtime(path: &AbsoluteFilePathBuf, mtime: &Time) -> Result<i64, DbError> {
+pub async fn set_node_mtime(path: &AbsolutePathBuf, mtime: &Time) -> Result<i64, DbError> {
     let path = path.to_string();
     let connection = get_connection().await?;
 
@@ -120,7 +121,7 @@ ON CONFLICT (path)
 /// TODO
 pub async fn set_alias_mtime(
     alias: &Attrname,
-    path: &AbsoluteFilePathBuf,
+    path: &AbsolutePathBuf,
     mtime: &Time,
 ) -> Result<(), DbError> {
     let alias = alias.to_string();
@@ -153,7 +154,7 @@ struct StoreQueryRow {
 
 /// # Errors
 /// TODO
-pub async fn get_store_bin_path(alias: &Attrname) -> Result<Option<String>, DbError> {
+pub async fn get_store_bin_path(alias: &Attrname) -> Result<Option<NixStorePath>, DbError> {
     let alias = alias.to_string();
 
     let connection = get_connection().await?;
@@ -175,17 +176,14 @@ WHERE
     .await
     .map_err(DbError::Query)?;
 
-    Ok(row.map(|row| row.store_path))
+    Ok(row.map(|row| row.store_path).map(NixStorePath::new))
 }
 
 /// # Errors
 /// TODO
-pub async fn write_store(
-    alias: &Attrname,
-    store_path: &AbsoluteFilePathBuf,
-) -> Result<(), DbError> {
-    let path = store_path.to_string();
-    let alias = alias.to_string();
+pub async fn write_store(alias: Attrname, store_path: NixStorePath) -> Result<(), DbError> {
+    let path = store_path.into_string();
+    let alias = alias.into_downcast();
 
     let connection = get_connection().await?;
 

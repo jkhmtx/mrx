@@ -1,3 +1,4 @@
+mod ast;
 mod attr;
 mod build_and_symlink;
 mod config;
@@ -6,7 +7,10 @@ mod find_nix_path_attrset;
 pub mod fs;
 pub mod graph;
 pub mod nix_build_command;
+pub mod nix_references_command;
+pub mod nix_store_path;
 
+pub use ast::*;
 pub use attr::Attrname;
 pub use attr::PathAttrset;
 pub use build_and_symlink::build_and_symlink;
