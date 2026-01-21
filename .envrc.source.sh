@@ -13,7 +13,7 @@ done < <(
     --hook
 )
 
-RUST_SRC_PATH="$(_.print-rust-src-path)"
+RUST_SRC_PATH="$(nix run '#_.print-rust-src-path')"
 export RUST_SRC_PATH
 
 DATABASE_URL="${DATABASE_URL}" \

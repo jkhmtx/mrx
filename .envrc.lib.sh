@@ -8,9 +8,9 @@ function envrc-mrx() {
     fi
   }
 
-  function strategy() {
+  function mrx-mode() {
     has_cargo="$(has cargo)"
-    has_upstream="$(has upstream)"
+    has_upstream="$(has mrx)"
     case "${USE_LOCAL_MRX:-false}" in
     1 | true | yes) needs_local_cargo=needs-local-cargo ;;
     *) needs_local_cargo=no-needs-local-cargo ;;
@@ -23,10 +23,10 @@ function envrc-mrx() {
     no-cargo:*:needs-local-cargo)
       echo "build-cargo"
       ;;
-    *:upstream:no-needs-local-cargo)
+    *:mrx:no-needs-local-cargo)
       echo "upstream"
       ;;
-    *:no-upstream:no-needs-local-cargo)
+    *:no-mrx:no-needs-local-cargo)
       echo "build-upstream"
       ;;
     *)
@@ -38,28 +38,30 @@ function envrc-mrx() {
   }
 
   # Build
-  case "$(strategy)" in
-  build-cargo | build-upstream)
-    paths="$(nix build '#_.shell' --no-link --print-out-paths)"
+  mode="$(mrx-mode)"
+  echo "mode: ${mode}" >&2
 
-    while read -r path; do
-      echo "${path}" >&2
-      PATH_add "${path}"/bin
-    done <<<"${paths}"
+  case "${mode}" in
+  build-cargo)
+    shell_path="$(nix build '#_.shell' --no-link --print-out-paths)"
+    PATH_add "${shell_path}"/bin
+    ;;
+  build-upstream)
+    nix build '#_.pkg.mrx' --out-link .direnv/mrx
+
+    PATH_add .direnv/mrx/bin
     ;;
   cargo) ;;
   upstream) ;;
   esac
 
   # Run
-  case "$(strategy)" in
+  case "${mode}" in
   build-cargo)
-    echo "Cargo should be in PATH"
-    exit 1
+    "${shell_path}"/bin/cargo run -- "${@}"
     ;;
   build-upstream)
-    echo "mrx should be in PATH"
-    exit 1
+    .direnv/mrx/bin/mrx "${@}"
     ;;
   cargo)
     cargo run -- "${@}"
