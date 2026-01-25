@@ -22,4 +22,6 @@
   print-rust-src-path = ./scripts/bin/print-rust-src-path/main.nix;
   shell = ./shell/main.nix;
   test-e2e = ./scripts/bin/test-e2e/main.nix;
+  testbed.go-monorepo.hello = ./testbed/go-monorepo/scripts/bin/hello/main.nix;
+  testbed.go-monorepo.shell = ./testbed/go-monorepo/shell/main.nix;
 }
