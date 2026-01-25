@@ -13,6 +13,7 @@ use sqlx::{
     SqlitePool,
 };
 use thiserror::Error;
+use tokio::runtime::Runtime;
 
 use crate::time::Time;
 
@@ -32,11 +33,13 @@ pub enum DbError {
     Query(sqlx::Error),
 }
 
-async fn get_connection() -> Result<SqlitePool, ConnectError> {
+fn get_connection() -> Result<SqlitePool, ConnectError> {
     let database_url = env::var("DATABASE_URL")?;
     let options = SqliteConnectOptions::from_str(&database_url)?.create_if_missing(true);
 
-    Ok(SqlitePool::connect_with(options).await?)
+    let rt = Runtime::new().unwrap();
+
+    Ok(rt.block_on(SqlitePool::connect_with(options))?)
 }
 
 #[derive(Debug, FromRow)]
@@ -44,45 +47,67 @@ struct MtimeQueryRow {
     mtime: NaiveDateTime,
 }
 
-/// # Errors
-/// TODO
-pub async fn get_mtime(id: NodeId) -> Result<Option<Time>, DbError> {
-    let connection = get_connection().await?;
+trait DbQuery<TExecuteResult> {
+    fn into_sql(self) -> String;
+    fn execute(self, connection: &SqlitePool) -> Result<TExecuteResult, DbError>;
+}
 
-    let mtime = match &id {
-        NodeId::Attrname(name) => {
-            let name = name.as_str();
-            sqlx::query_as!(
-                MtimeQueryRow,
-                r#"
+#[derive(Debug)]
+struct GetMtimeQuery {
+    node_id: NodeId,
+}
+
+impl GetMtimeQuery {
+    #[must_use]
+    fn new(node_id: NodeId) -> Self {
+        Self { node_id }
+    }
+}
+
+impl DbQuery<Option<Time>> for GetMtimeQuery {
+    fn into_sql(self) -> String {
+        match self.node_id {
+            NodeId::Attrname(name) => {
+                format!(
+                    r"
                     select mtime
                     from node
                     join alias on alias.node_id = node.id
-                    where alias.alias = ?
-            "#,
-                name
-            )
-            .fetch_optional(&connection)
-            .await
-        }
+                    where alias.alias = {name}
+            ",
+                )
+            }
 
-        NodeId::Path(path) => {
-            let path = path.to_string_lossy();
+            NodeId::Path(path) => {
+                let path = path.to_string_lossy();
 
-            sqlx::query_as!(
-                MtimeQueryRow,
-                r#"
-                    select mtime from node where path = ?
-                "#,
-                path
-            )
-            .fetch_optional(&connection)
-            .await
+                format!(
+                    r"
+                    select mtime from node where path = {path}
+                ",
+                )
+            }
         }
     }
-    .map_err(DbError::Query)?;
 
-    Ok(mtime.map(|mtime| mtime.mtime.and_utc()))
+    fn execute(self, connection: &SqlitePool) -> Result<Option<Time>, DbError> {
+        let rt = Runtime::new().unwrap();
+
+        let sql = self.into_sql();
+        let mtime: Option<MtimeQueryRow> = rt
+            .block_on(sqlx::query_as(&sql).fetch_optional(connection))
+            .map_err(DbError::Query)?;
+
+        Ok(mtime.map(|mtime| mtime.mtime.and_utc()))
+    }
+}
+
+/// # Errors
+/// TODO
+pub fn get_mtime(node_id: NodeId) -> Result<Option<Time>, DbError> {
+    let connection = get_connection()?;
+
+    GetMtimeQuery::new(node_id).execute(&connection)
 }
 
 #[derive(Debug, FromRow)]
@@ -94,7 +119,7 @@ struct ReturningIdInsertRow {
 /// TODO
 pub async fn set_node_mtime(path: &AbsolutePathBuf, mtime: &Time) -> Result<i64, DbError> {
     let path = path.to_string();
-    let connection = get_connection().await?;
+    let connection = get_connection()?;
 
     let returning = sqlx::query_as!(
         ReturningIdInsertRow,
@@ -126,7 +151,7 @@ pub async fn set_alias_mtime(
 ) -> Result<(), DbError> {
     let alias = alias.to_string();
 
-    let connection = get_connection().await?;
+    let connection = get_connection()?;
 
     let id = set_node_mtime(path, mtime).await?;
 
@@ -157,7 +182,7 @@ struct StoreQueryRow {
 pub async fn get_store_bin_path(alias: &Attrname) -> Result<Option<NixStorePath>, DbError> {
     let alias = alias.to_string();
 
-    let connection = get_connection().await?;
+    let connection = get_connection()?;
 
     let row = sqlx::query_as!(
         StoreQueryRow,
@@ -185,7 +210,7 @@ pub async fn write_store(alias: Attrname, store_path: NixStorePath) -> Result<()
     let path = store_path.into_string();
     let alias = alias.into_downcast();
 
-    let connection = get_connection().await?;
+    let connection = get_connection()?;
 
     sqlx::query!(
         r#"

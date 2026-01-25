@@ -159,10 +159,8 @@ fn get_file_mtime(path: impl AsRef<Path>) -> Time {
 
 async fn is_stale(graph: &Graph, id: NodeId) -> bool {
     if let Some((idx, node)) = graph.find_node(&id) {
-        let mtime = get_mtime(NodeId::Path(node.path.clone()))
-            .await
-            .ok()
-            .flatten();
+        let node_id = NodeId::Path(node.path.clone());
+        let mtime = get_mtime(node_id).ok().flatten();
 
         let file_mtime = get_file_mtime(&node.path);
         let stale = mtime.is_none_or(|mtime| file_mtime > mtime);
