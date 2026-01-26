@@ -171,7 +171,7 @@ async fn is_stale(graph: &Graph, id: NodeId) -> bool {
                     .await
                     .unwrap();
             } else {
-                let _ = set_node_mtime(&node.path, &file_mtime).await.unwrap();
+                let _ = set_node_mtime(&node.path, &file_mtime).unwrap();
             }
         }
 

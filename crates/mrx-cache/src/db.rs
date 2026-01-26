@@ -42,11 +42,6 @@ fn get_connection() -> Result<SqlitePool, ConnectError> {
     Ok(rt.block_on(SqlitePool::connect_with(options))?)
 }
 
-#[derive(Debug, FromRow)]
-struct MtimeQueryRow {
-    mtime: NaiveDateTime,
-}
-
 trait DbQuery<TExecuteResult> {
     fn into_sql(self) -> String;
     fn execute(self, connection: &SqlitePool) -> Result<TExecuteResult, DbError>;
@@ -57,11 +52,9 @@ struct GetMtimeQuery {
     node_id: NodeId,
 }
 
-impl GetMtimeQuery {
-    #[must_use]
-    fn new(node_id: NodeId) -> Self {
-        Self { node_id }
-    }
+#[derive(Debug, FromRow)]
+struct MtimeQueryRow {
+    mtime: NaiveDateTime,
 }
 
 impl DbQuery<Option<Time>> for GetMtimeQuery {
@@ -107,7 +100,7 @@ impl DbQuery<Option<Time>> for GetMtimeQuery {
 pub fn get_mtime(node_id: NodeId) -> Result<Option<Time>, DbError> {
     let connection = get_connection()?;
 
-    GetMtimeQuery::new(node_id).execute(&connection)
+    GetMtimeQuery { node_id }.execute(&connection)
 }
 
 #[derive(Debug, FromRow)]
@@ -115,31 +108,46 @@ struct ReturningIdInsertRow {
     id: i64,
 }
 
-/// # Errors
-/// TODO
-pub async fn set_node_mtime(path: &AbsolutePathBuf, mtime: &Time) -> Result<i64, DbError> {
-    let path = path.to_string();
-    let connection = get_connection()?;
+struct SetNodeMtimeQuery<'a> {
+    path: &'a AbsolutePathBuf,
+    mtime: &'a Time,
+}
 
-    let returning = sqlx::query_as!(
-        ReturningIdInsertRow,
-        r#"
+impl DbQuery<i64> for SetNodeMtimeQuery<'_> {
+    fn into_sql(self) -> String {
+        let Self { path, mtime } = self;
+
+        format!(
+            r"
 INSERT INTO node (path, mtime)
-    VALUES (?1, ?2)
+    VALUES ({path}, {mtime})
 ON CONFLICT (path)
     DO UPDATE SET
         mtime = ?2
     RETURNING
         id
-            "#,
-        path,
-        mtime
-    )
-    .fetch_one(&connection)
-    .await
-    .map_err(DbError::Query)?;
+            ",
+        )
+    }
 
-    Ok(returning.id)
+    fn execute(self, connection: &SqlitePool) -> Result<i64, DbError> {
+        let rt = Runtime::new().unwrap();
+
+        let sql = self.into_sql();
+        let returning: ReturningIdInsertRow = rt
+            .block_on(sqlx::query_as(&sql).fetch_one(connection))
+            .map_err(DbError::Query)?;
+
+        Ok(returning.id)
+    }
+}
+
+/// # Errors
+/// TODO
+pub fn set_node_mtime(path: &AbsolutePathBuf, mtime: &Time) -> Result<i64, DbError> {
+    let connection = get_connection()?;
+
+    SetNodeMtimeQuery { path, mtime }.execute(&connection)
 }
 
 /// # Errors
@@ -153,7 +161,7 @@ pub async fn set_alias_mtime(
 
     let connection = get_connection()?;
 
-    let id = set_node_mtime(path, mtime).await?;
+    let id = set_node_mtime(path, mtime)?;
 
     sqlx::query!(
         r#"
