@@ -1110,7 +1110,6 @@ dependencies = [
  "mrx-hook",
  "mrx-show",
  "mrx-utils",
- "tokio",
 ]
 
 [[package]]

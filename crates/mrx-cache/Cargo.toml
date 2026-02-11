@@ -7,8 +7,15 @@ edition = "2024"
 chrono = "0.4.42"
 clap = { version = "4.5.53", features = ["derive"] }
 mrx-utils = { path = "../mrx-utils" }
+# rusqlite = { version = "0.38.0", default-features = false, features = [
+#   "bundled",
+#   "extra_check",
+#   "modern_sqlite",
+#   "time",
+# ] }
 sqlx = { version = "0.8.6", features = ["chrono", "runtime-tokio", "sqlite"] }
 thiserror = "2.0.17"
+# time = { version = "0.3.46", features = ["alloc", "std"] }
 tokio = { version = "1.49.0", features = ["macros", "rt", "rt-multi-thread"] }
 
 [lints]
