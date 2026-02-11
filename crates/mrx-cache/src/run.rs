@@ -10,8 +10,8 @@ use crate::{
 
 /// ### Panics
 /// TODO
-pub async fn run(config: &Config, options: &Options) {
-    match cache(config, options).await {
+pub fn run(config: &Config, options: &Options) {
+    match cache(config, options) {
         Err(e) => {
             eprintln!("{e}");
 
