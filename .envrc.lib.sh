@@ -1,22 +1,24 @@
 # shellcheck shell=bash
 function envrc-mrx() {
-  function has() {
-    if command -v "${1}" >/dev/null 2>&1; then
-      echo "${1}"
-    else
-      echo no-"${1}"
-    fi
-  }
-
   function mrx-mode() {
-    has_cargo="$(has cargo)"
-    has_upstream="$(has mrx)"
+    if command -v cargo >/dev/null 2>&1; then
+      has_cargo=cargo
+    else
+      has_cargo=no-cargo
+    fi
+
+    if test -s .direnv/mrx/bin/mrx; then
+      has_cache=mrx
+    else
+      has_cache=no-mrx
+    fi
+
     case "${USE_LOCAL_MRX:-false}" in
     1 | true | yes) needs_local_cargo=needs-local-cargo ;;
     *) needs_local_cargo=no-needs-local-cargo ;;
     esac
 
-    case "${has_cargo}:${has_upstream}:${needs_local_cargo}" in
+    case "${has_cargo}:${has_cache}:${needs_local_cargo}" in
     cargo:*:needs-local-cargo)
       echo "cargo"
       ;;
@@ -24,13 +26,13 @@ function envrc-mrx() {
       echo "build-cargo"
       ;;
     *:mrx:no-needs-local-cargo)
-      echo "upstream"
+      echo "cache"
       ;;
     *:no-mrx:no-needs-local-cargo)
-      echo "build-upstream"
+      echo "build-cache"
       ;;
     *)
-      echo "Unhandled case: ${has_cargo}:${has_upstream}:${needs_local_cargo}" >&2
+      echo "Unhandled case: ${has_cargo}:${has_cache}:${needs_local_cargo}" >&2
 
       exit 1
       ;;
@@ -46,13 +48,13 @@ function envrc-mrx() {
     shell_path="$(nix build '#_.shell' --no-link --print-out-paths)"
     PATH_add "${shell_path}"/bin
     ;;
-  build-upstream)
+  build-cache)
     nix build '#_.pkg.mrx' --out-link .direnv/mrx
 
     PATH_add .direnv/mrx/bin
     ;;
   cargo) ;;
-  upstream) ;;
+  cache) ;;
   esac
 
   # Run
@@ -60,14 +62,11 @@ function envrc-mrx() {
   build-cargo)
     "${shell_path}"/bin/cargo run -- "${@}"
     ;;
-  build-upstream)
+  build-cache | cache)
     .direnv/mrx/bin/mrx "${@}"
     ;;
   cargo)
     cargo run -- "${@}"
-    ;;
-  upstream)
-    mrx "${@}"
     ;;
   esac
 }

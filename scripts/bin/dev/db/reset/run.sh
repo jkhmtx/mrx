@@ -1,11 +1,9 @@
 # shellcheck shell=bash
 
-export DATABASE_URL="${DATABASE_URL}"
+export DATABASE_PATH="${DATABASE_PATH}"
 
-dev_db="${DATABASE_URL#sqlite://}"
-
-dir="$(dirname "${dev_db}")"
+dir="$(dirname "${DATABASE_PATH}")"
 mkdir -p "${dir}"
 
-rm "${dev_db}" >/dev/null 2>&1 || true
-_.lib.migrations.apply "${dev_db}"
+rm "${DATABASE_PATH}" >/dev/null 2>&1 || true
+_.lib.migrations.apply "${DATABASE_PATH}"
