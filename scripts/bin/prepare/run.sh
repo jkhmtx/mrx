@@ -1,18 +1,12 @@
 # shellcheck shell=bash
 
-export DATABASE_URL="${DATABASE_URL}"
+export DATABASE_PATH="${DATABASE_PATH}"
 
-dev_db="${DATABASE_URL#sqlite://}"
-
-dir="$(dirname "${dev_db}")"
+dir="$(dirname "${DATABASE_PATH}")"
 mkdir -p "${dir}"
 
 schema_db="${dir}/schema.db"
 
-rm "${schema_db}" >/dev/null 2>&1 || true
+rm "${schema_db}" >/dev/null 2>&1 || true >/dev/null 2>&1
 _.lib.migrations.apply "${schema_db}"
-
-DATABASE_URL="sqlite://${schema_db}" \
-	sqlx prepare --workspace
-
-_.lib.migrations.apply "${dev_db}"
+_.lib.migrations.apply "${DATABASE_PATH}"

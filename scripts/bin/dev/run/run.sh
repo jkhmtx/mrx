@@ -2,4 +2,4 @@
 
 _.prepare
 
-cargo start "${@}"
+cargo run "${@}"

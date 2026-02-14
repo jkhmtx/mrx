@@ -34,9 +34,7 @@ in
 
     src = nixpkgs.lib.sourceByRegex ../../. (
       []
-      ++ [".sqlx" ".+\.json"]
       ++ (crateSrcOf "crates" ".+")
-      ++ (crateSrcOf "xtask" "src")
       ++ ["cached.sh"]
     );
 

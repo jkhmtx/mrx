@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS node (
     id integer PRIMARY KEY autoincrement,
     path text CHECK (path LIKE '/%') UNIQUE NOT NULL,
-    mtime datetime NOT NULL
-);
+    mtime integer NOT NULL)
+STRICT;
 
 CREATE TABLE IF NOT EXISTS alias (
     id integer PRIMARY KEY,
@@ -10,3 +10,4 @@ CREATE TABLE IF NOT EXISTS alias (
     node_id integer UNIQUE NOT NULL,
     FOREIGN KEY (node_id) REFERENCES node (id))
 STRICT;
+

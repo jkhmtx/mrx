@@ -1,14 +1,12 @@
 # shellcheck shell=bash
 
-export DATABASE_URL="${DATABASE_URL}"
+export DATABASE_PATH="${DATABASE_PATH}"
 
-dev_db="${DATABASE_URL#sqlite://}"
-
-dir="$(dirname "${dev_db}")"
+dir="$(dirname "${DATABASE_PATH}")"
 mkdir -p "${dir}"
 
 function sqlite() {
-	sqlite3 "${dev_db}" "${@}"
+	sqlite3 "${DATABASE_PATH}" "${@}"
 }
 
 if test -t 0; then

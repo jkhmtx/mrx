@@ -200,7 +200,14 @@ impl Graph {
         });
 
         for node in known_nodes {
-            graph.add_node(&mut lookup, node?);
+            match node {
+                Ok(node) => {
+                    graph.add_node(&mut lookup, node);
+                    Ok(())
+                }
+                Err(AbsolutePathBufError::NotFound(_)) => Ok(()),
+                Err(e) => Err(e),
+            }?;
         }
 
         let mut visited = HashSet::default();

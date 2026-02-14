@@ -10,6 +10,6 @@ pub fn run(config: &Config, options: &Options) {
 
     eprintln!("The following commands are available in your shell:");
     for bin in bins {
-        eprintln!("  {bin}");
+        eprintln!("  - {bin}");
     }
 }
