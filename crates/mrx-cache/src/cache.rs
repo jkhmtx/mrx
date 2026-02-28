@@ -26,7 +26,7 @@ use mrx_utils::{
         NixStorePath,
     },
 };
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
 use crate::{
     DbError,
@@ -40,7 +40,7 @@ use crate::{
     write_store,
 };
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub(crate) enum CacheError {
     #[error("No derivations provided. Provide at least one as a positional argument.")]
     NoDerivations,

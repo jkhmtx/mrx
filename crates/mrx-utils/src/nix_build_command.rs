@@ -1,7 +1,7 @@
 use std::io::Write as __;
 
 use serde::de::Error;
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
 use crate::{
     config::Entrypoint,
@@ -14,7 +14,7 @@ pub struct NixBuildCommand<'a> {
     derivations: &'a [String],
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum NixBuildError {
     #[error("Failed to run nix build command: 'nix {command_string}'")]
     Command {

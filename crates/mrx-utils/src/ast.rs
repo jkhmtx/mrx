@@ -7,7 +7,7 @@ use std::{
     },
 };
 
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
 use crate::fs::is_nix;
 
@@ -83,7 +83,7 @@ fn walk(syntax_node: &rnix::SyntaxNode, nodes: &mut Vec<NixAst>) {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum NixAstNodesError {
     #[error("Not a nix file: {0}")]
     NotNix(PathBuf),

@@ -12,9 +12,9 @@ use std::{
     },
 };
 
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum AttrnameError {
     #[error("Invalid attrname: {0}")]
     Name(String),
@@ -184,7 +184,7 @@ impl PathAttr {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum PathAttrsetError {
     #[error("{0}")]
     Attrname(#[from] AttrnameError),

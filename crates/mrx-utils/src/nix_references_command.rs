@@ -1,4 +1,4 @@
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
 use crate::nix_store_path::NixStorePath;
 
@@ -7,7 +7,7 @@ pub struct NixReferencesCommand<'a> {
     store_paths: &'a [NixStorePath],
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum NixReferencesError {
     #[error("Failed to run nix build command: 'nix {command_string}'")]
     Command {

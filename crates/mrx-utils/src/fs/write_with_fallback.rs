@@ -1,9 +1,9 @@
 use std::io::Write as _;
 use std::path::Path;
 
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum WriteWithFallbackError {
     #[error("writing tempfile failed: `{0}`")]
     Failed(std::io::Error),

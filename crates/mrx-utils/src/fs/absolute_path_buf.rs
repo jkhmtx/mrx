@@ -11,7 +11,7 @@ use std::{
     },
 };
 
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
 use crate::attr::PathAttr;
 
@@ -31,7 +31,7 @@ impl Deref for AbsolutePathBuf {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum AbsolutePathBufError {
     #[error("Path not found: {0}")]
     NotFound(PathBuf),
@@ -228,7 +228,7 @@ impl Display for AbsolutePathBuf {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum RelativeToParentError {
     #[error("Invalid parent: {0}")]
     InvalidParent(String),

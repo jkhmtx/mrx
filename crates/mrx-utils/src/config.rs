@@ -10,7 +10,7 @@ use serde::Deserialize;
 
 const DEFAULT_CONFIG_PATH: &str = "mrx.toml";
 
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
 use crate::fs::pathbuf_if_exists;
 
@@ -49,7 +49,7 @@ impl Config {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum ConfigValueError {
     #[error("value `{0}` is missing")]
     MissingValue(String),
@@ -147,7 +147,7 @@ impl Config {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum ConfigInitError {
     #[error("file `{0}` not found")]
     NotFound(PathBuf),

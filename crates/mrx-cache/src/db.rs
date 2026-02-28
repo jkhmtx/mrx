@@ -12,11 +12,11 @@ use rusqlite::{
     Result,
     Statement,
 };
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
 use crate::unix_seconds::UnixSeconds;
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum ConnectError {
     #[error("Environment error: {0}")]
     Environment(#[from] VarError),
@@ -24,7 +24,7 @@ pub enum ConnectError {
     Connect(#[from] rusqlite::Error),
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum DbError {
     #[error("Failed to connect: {0}")]
     Connect(#[from] ConnectError),
@@ -200,7 +200,7 @@ pub fn get_store_bin_path(alias: &Attrname) -> Result<Option<NixStorePath>, DbEr
         .map_err(DbError::query_error_with(statement))
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum WriteStoreError {
     #[error(transparent)]
     DbError(DbError),

@@ -12,11 +12,11 @@ use mrx_utils::{
     PathAttrset,
     find_nix_path_attrset,
 };
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
 use crate::Options;
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub(crate) enum GenerateError {
     #[error("invalid destination `{0}`")]
     InvalidDestination(String),

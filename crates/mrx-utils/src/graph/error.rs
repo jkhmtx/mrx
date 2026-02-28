@@ -1,4 +1,4 @@
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
 use crate::{
     ast::NixAstNodesError,
@@ -6,7 +6,7 @@ use crate::{
     fs::AbsolutePathBufError,
 };
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum GraphError {
     #[error("No fallback entrypoint 'flake.nix' or 'default.nix' found")]
     NoEntrypoint,

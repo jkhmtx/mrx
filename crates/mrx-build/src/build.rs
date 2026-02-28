@@ -13,11 +13,11 @@ use mrx_utils::{
     Config,
     find_bin_attrnames,
 };
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
 use crate::cli::Options;
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub(crate) enum BuildError {
     #[error("No entrypoint 'flake.nix' or 'default.nix' found")]
     NoEntrypoint,
