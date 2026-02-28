@@ -1,4 +1,3 @@
-use std::fmt::Write as _;
 use std::{
     collections::HashMap,
     fmt::Display,
@@ -12,9 +11,9 @@ use std::{
     },
 };
 
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum AttrnameError {
     #[error("Invalid attrname: {0}")]
     Name(String),
@@ -140,15 +139,6 @@ impl AsRef<Path> for PathAttr {
 }
 
 impl PathAttr {
-    pub fn to_relative_path(&self, path_prefix: &str) -> Result<String, std::fmt::Error> {
-        let mut s = String::new();
-        let path = self.path.to_string_lossy();
-
-        write!(&mut s, "{path_prefix}{path}")?;
-
-        Ok(s)
-    }
-
     pub fn as_path(&self) -> &Path {
         &self.path
     }
@@ -184,7 +174,7 @@ impl PathAttr {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum PathAttrsetError {
     #[error("{0}")]
     Attrname(#[from] AttrnameError),
@@ -192,13 +182,15 @@ pub enum PathAttrsetError {
 
 type PathAttrsetDeref = HashMap<Attrname, PathAttr>;
 
+pub(crate) type PathAttrsetResult<T> = Result<T, exn::Exn<PathAttrsetError>>;
+
 #[derive(Debug, Default)]
 pub struct PathAttrset(PathAttrsetDeref);
 
 impl PathAttrset {
     /// # Errors
     /// An error is returned if any of the paths are not relative paths beginning with "./"
-    pub fn new(paths: impl IntoIterator<Item = PathBuf>) -> Result<Self, PathAttrsetError> {
+    pub fn new(paths: impl IntoIterator<Item = PathBuf>) -> PathAttrsetResult<Self> {
         let mut attrset = Self(PathAttrsetDeref::new());
 
         for path in paths {

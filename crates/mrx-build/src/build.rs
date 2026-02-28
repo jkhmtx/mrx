@@ -2,10 +2,10 @@ use std::fmt::Write as _;
 use std::os::unix::fs::PermissionsExt as UnixPermissions;
 use std::path::Path;
 
+use exn::ResultExt as _;
 use mrx_utils::fs::recreate_dir;
 use mrx_utils::nix_build_command::{
     NixBuildCommand,
-    NixBuildError,
     NixBuildOutput,
 };
 use mrx_utils::nix_store_path::NixStorePath;
@@ -13,31 +13,35 @@ use mrx_utils::{
     Config,
     find_bin_attrnames,
 };
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
 use crate::cli::Options;
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub(crate) enum BuildError {
-    #[error("No entrypoint 'flake.nix' or 'default.nix' found")]
+    #[error(
+        "BuildError::GettingEntrypoint: custom entrypoint, 'flake.nix' or 'default.nix' not found"
+    )]
     NoEntrypoint,
-    #[error(transparent)]
-    Build(#[from] NixBuildError),
-    #[error("Writing cache failed: {0}")]
-    Cache(#[from] std::io::Error),
-    #[error("TODO: {0}")]
-    Todo(&'static str),
+    #[error("BuildError::GettingBinAttrnames")]
+    GettingBinAttrnames,
+    #[error("BuildError::NixBuildCommand")]
+    NixBuildCommand,
+    #[error("BuildError::FailedToResetBinDir")]
+    FailedToResetBinDir,
+    #[error("BuildError::FailedToGetExe")]
+    FailedToGetExe,
+    #[error("BuildError::FailedToWriteBin")]
+    FailedToWriteBin,
 }
 
-type BuildResult<T> = Result<T, BuildError>;
-
-fn reset_bin_dir(bin_dir: &Path) -> BuildResult<()> {
-    recreate_dir(bin_dir).map_err(|_| BuildError::Todo("reset_bin_dir"))
-}
+type BuildResult<T> = Result<T, exn::Exn<BuildError>>;
 
 fn write_bin_dir(bin_dir: &Path, config: &Config) -> BuildResult<()> {
-    let bins = find_bin_attrnames(config);
+    let bins = find_bin_attrnames(config).or_raise(|| BuildError::GettingBinAttrnames)?;
     let cached_sh = include_str!("cached.sh");
+
+    let this_mrx_bin = std::env::current_exe().or_raise(|| BuildError::FailedToGetExe)?;
 
     for bin in bins {
         let path = bin_dir.join(&bin.0);
@@ -45,38 +49,39 @@ fn write_bin_dir(bin_dir: &Path, config: &Config) -> BuildResult<()> {
         let buf = {
             let mut buf = String::new();
 
-            let this_mrx_bin =
-                std::env::current_exe().map_err(|_| BuildError::Todo("current_exe"))?;
-
             let env_vars = [
                 ("__MRX_DERIVATION", bin.to_string().into()),
                 ("__MRX_THIS_MRX_BIN", this_mrx_bin.to_string_lossy()),
             ];
 
             for (k, v) in env_vars {
-                writeln!(&mut buf, "export {k}={v}")
-                    .map_err(|_| BuildError::Todo("write_bin_dir"))?;
+                writeln!(&mut buf, "export {k}={v}").or_raise(|| BuildError::FailedToWriteBin)?;
             }
 
-            write!(&mut buf, "\n{cached_sh}").map_err(|_| BuildError::Todo("write_cached_sh"))?;
+            write!(&mut buf, "\n{cached_sh}").or_raise(|| BuildError::FailedToWriteBin)?;
 
             buf
         };
 
-        std::fs::write(&path, buf.as_bytes())?;
-
-        let mut perms = std::fs::metadata(&path)?.permissions();
-        perms.set_mode(0o755);
-        std::fs::set_permissions(&path, perms)?;
+        write_cache_file(&path, &buf).or_raise(|| BuildError::FailedToWriteBin)?;
     }
 
     Ok(())
 }
 
+fn write_cache_file(path: &std::path::PathBuf, buf: &str) -> Result<(), std::io::Error> {
+    std::fs::write(path, buf.as_bytes())?;
+
+    let mut perms = std::fs::metadata(path)?.permissions();
+    let readonly_mode = 0o755;
+    perms.set_mode(readonly_mode);
+
+    std::fs::set_permissions(path, perms)?;
+    Ok(())
+}
+
 /// # Errors
-/// TODO
-/// # Panics
-/// TODO
+/// See [`BuildError`].
 pub(crate) fn build(config: &Config, options: &Options) -> BuildResult<Vec<String>> {
     if options.generate {
         mrx_generate::run(config, &mrx_generate::Options::default());
@@ -90,7 +95,8 @@ pub(crate) fn build(config: &Config, options: &Options) -> BuildResult<Vec<Strin
         .ok_or(BuildError::NoEntrypoint)?;
 
     let mut paths = build_command
-        .execute()?
+        .execute()
+        .map_err(|err| err.raise(BuildError::NixBuildCommand))?
         .into_iter()
         .map(|NixBuildOutput { bin, out }| {
             bin.or(out.map(|path| NixStorePath::BinDir(path.into_string() + "/bin")))
@@ -106,7 +112,7 @@ pub(crate) fn build(config: &Config, options: &Options) -> BuildResult<Vec<Strin
             dir.join("bin")
         };
 
-        reset_bin_dir(&bin_dir)?;
+        recreate_dir(&bin_dir).or_raise(|| BuildError::FailedToResetBinDir)?;
         write_bin_dir(&bin_dir, config)?;
 
         // If sourced by PATH_add in order,

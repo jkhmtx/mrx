@@ -1,3 +1,4 @@
+use exn as _;
 use thiserror as _;
 
 mod cli;

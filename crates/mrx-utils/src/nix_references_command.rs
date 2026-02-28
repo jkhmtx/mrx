@@ -1,4 +1,5 @@
-use thiserror::Error;
+use exn::bail;
+use thiserror::Error as ThisError;
 
 use crate::nix_store_path::NixStorePath;
 
@@ -7,17 +8,17 @@ pub struct NixReferencesCommand<'a> {
     store_paths: &'a [NixStorePath],
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum NixReferencesError {
-    #[error("Failed to run nix build command: 'nix {command_string}'")]
+    /// This error is yieled when the command fails to start due to an IO or permission problem.
+    #[error("NixReferencesError::Command: 'nix-store {command_string}'")]
     Command {
         command_string: String,
         #[source]
         io_err: std::io::Error,
     },
-    #[error("Failed to deserialize: {0}")]
-    Deserialization(#[from] serde_json::Error),
-    #[error("nix build command failed: {0}")]
+    /// This error is yieled when there is an error in the execution of the nix-store command.
+    #[error("NixReferencesError::Failed: '{0}'")]
     Failed(String),
 }
 
@@ -33,12 +34,12 @@ impl<'a> NixReferencesCommand<'a> {
     }
 }
 
+pub type NixReferencesCommandResult<T> = Result<T, exn::Exn<NixReferencesError>>;
+
 impl NixReferencesCommand<'_> {
     /// # Errors
-    /// TODO
-    /// # Panics
-    /// TODO
-    pub fn execute(self) -> Result<NixReferencesOutput, NixReferencesError> {
+    /// See [`NixReferencesError`].
+    pub fn execute(self) -> NixReferencesCommandResult<NixReferencesOutput> {
         let mut args: Vec<&str> = vec!["--query", "--requisites"];
 
         if !self.store_paths.is_empty() {
@@ -65,7 +66,7 @@ impl NixReferencesCommand<'_> {
         if !output.status.success() {
             let err_out = String::from_utf8_lossy(&output.stderr);
 
-            return Err(NixReferencesError::Failed(err_out.to_string()));
+            bail!(NixReferencesError::Failed(err_out.to_string()));
         }
 
         let store_paths = String::from_utf8_lossy(&output.stdout)

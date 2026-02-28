@@ -1,4 +1,5 @@
 use std::{
+    error::Error,
     fmt::Display,
     fs::{
         self,
@@ -11,7 +12,8 @@ use std::{
     },
 };
 
-use thiserror::Error;
+use exn::OptionExt as _;
+use thiserror::Error as ThisError;
 
 use crate::attr::PathAttr;
 
@@ -31,34 +33,72 @@ impl Deref for AbsolutePathBuf {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum AbsolutePathBufError {
-    #[error("Path not found: {0}")]
-    NotFound(PathBuf),
-    #[error("Path is not a file or directory: {0}")]
-    NotSupported(PathBuf),
-    #[error("Io error: {0}")]
-    Io(PathBuf, std::io::Error),
+    #[error("AbsolutePathBufError::NotFound")]
+    NotFound,
+    #[error("AbsolutePathBufError::Canonicalizing")]
+    Canonicalizing,
+    #[error("AbsolutePathBufError::GettingMetadata")]
+    GettingMetadata,
+    #[error("AbsolutePathBufError::Io: '{0}'")]
+    Io(std::io::Error),
 }
 
-fn canonicalize(path: &Path) -> Result<PathBuf, AbsolutePathBufError> {
-    fs::canonicalize(path).map_err(|e| match e.kind() {
-        std::io::ErrorKind::NotFound => AbsolutePathBufError::NotFound(path.to_path_buf()),
-        _ => AbsolutePathBufError::Io(path.to_path_buf(), e),
-    })
+pub type AbsolutePathBufResult<T> = Result<T, MyExn<AbsolutePathBufError>>;
+
+#[derive(Debug)]
+pub struct MyExn<T: Error + Send + Sync + Display + 'static>(exn::Exn<T>);
+
+impl<T: Error + Send + Sync + Display + 'static> Error for MyExn<T> {}
+
+impl<T: Error + Send + Sync + Display + 'static> Display for MyExn<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
 }
 
-fn metadata(path: &Path) -> Result<Metadata, AbsolutePathBufError> {
-    path.metadata().map_err(|e| match e.kind() {
-        std::io::ErrorKind::NotFound => AbsolutePathBufError::NotFound(path.to_path_buf()),
-        _ => AbsolutePathBufError::Io(path.to_path_buf(), e),
-    })
+impl<T: Error + Send + Sync + Display + 'static> From<T> for MyExn<T> {
+    fn from(value: T) -> Self {
+        Self(exn::Exn::from(value))
+    }
+}
+
+impl<T: Error + Send + Sync + Display + 'static> From<exn::Exn<T>> for MyExn<T> {
+    fn from(value: exn::Exn<T>) -> Self {
+        Self(value)
+    }
+}
+
+impl<T: Error + Send + Sync + 'static> Deref for MyExn<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl From<std::io::Error> for MyExn<AbsolutePathBufError> {
+    fn from(value: std::io::Error) -> Self {
+        match value.kind() {
+            std::io::ErrorKind::NotFound => MyExn(exn::Exn::from(AbsolutePathBufError::NotFound)),
+            _ => MyExn(exn::Exn::from(AbsolutePathBufError::Io(value))),
+        }
+    }
+}
+
+fn canonicalize(path: &Path) -> AbsolutePathBufResult<PathBuf> {
+    Ok(fs::canonicalize(path)?)
+}
+
+fn metadata(path: &Path) -> AbsolutePathBufResult<Metadata> {
+    Ok(path.metadata()?)
 }
 
 impl TryFrom<&Path> for AbsolutePathBuf {
-    type Error = AbsolutePathBufError;
+    type Error = MyExn<AbsolutePathBufError>;
 
-    fn try_from(path: &Path) -> Result<Self, Self::Error> {
+    fn try_from(path: &Path) -> AbsolutePathBufResult<Self> {
         let default_nix = path.join("default.nix");
         let path = if default_nix.is_file() {
             &default_nix
@@ -79,9 +119,9 @@ impl TryFrom<&Path> for AbsolutePathBuf {
 }
 
 impl TryFrom<&PathAttr> for AbsolutePathBuf {
-    type Error = AbsolutePathBufError;
+    type Error = MyExn<AbsolutePathBufError>;
 
-    fn try_from(value: &PathAttr) -> Result<Self, Self::Error> {
+    fn try_from(value: &PathAttr) -> AbsolutePathBufResult<Self> {
         AbsolutePathBuf::try_from(value.as_ref())
     }
 }
@@ -115,61 +155,30 @@ impl AbsolutePathBuf {
     }
 
     /// # Errors
-    /// TODO
-    /// # Panics
-    /// TODO
-    pub fn try_from_relative(
-        path: &Path,
-        relative_to: &Path,
-    ) -> Result<Self, AbsolutePathBufError> {
-        let relative_to_abs = Self::try_from(relative_to)?;
-        let mut parent = relative_to_abs
-            .parent()
-            .expect("This should only fail when 'relative_to' is the filesystem root '/'");
-        let (up_traversing, components): (Vec<_>, Vec<_>) = path
-            .components()
-            .partition(|s| s.as_os_str() == ".." || s.as_os_str() == ".");
-        for _ in up_traversing.iter().filter(|s| s.as_os_str() != ".") {
-            parent = parent
-                .parent()
-                .ok_or(AbsolutePathBufError::NotFound(parent.join("../").clone()))?;
-        }
-
-        let mut path = PathBuf::new();
-        path.extend(components);
-        let path = parent.join(path);
-
-        Self::try_from(path.as_path())
-    }
-
-    /// # Errors
     /// Returns an error if [`parent`] is not a directory, or is not a parent of [`self`]
-    pub fn as_relative_to_parent(&self, parent: &Path) -> Result<PathBuf, RelativeToParentError> {
+    pub fn as_relative_to_parent(&self, parent: &Path) -> RelativeToParentResult<PathBuf> {
         if parent.is_file() {
-            return Err(RelativeToParentError::InvalidParent(format!(
+            return Err(MyExn::from(RelativeToParentError::InvalidParent(format!(
                 "path {} is not a directory",
                 parent.to_string_lossy()
-            )));
+            ))));
         }
 
         if !parent.exists() {
-            return Err(RelativeToParentError::InvalidParent(format!(
+            return Err(MyExn::from(RelativeToParentError::InvalidParent(format!(
                 "path {} does not exist",
                 parent.to_string_lossy()
-            )));
+            ))));
         }
 
         let relative_to = if parent.is_absolute() {
             parent.to_path_buf()
         } else {
-            canonicalize(parent).map_err(|e| match e {
-                AbsolutePathBufError::Io(path_buf, error) => {
-                    RelativeToParentError::Io(path_buf, error)
-                }
-                AbsolutePathBufError::NotFound(_) | AbsolutePathBufError::NotSupported(_) => {
-                    unreachable!()
-                }
-            })?
+            match canonicalize(parent) {
+                Ok(path) => Ok(path),
+                Err(e) if matches!(*e, AbsolutePathBufError::NotFound) => unreachable!(),
+                Err(e) => Err(RelativeToParentError::AbsolutePathBufError(e)),
+            }?
         };
 
         let relative: Option<PathBuf> = {
@@ -207,13 +216,13 @@ impl AbsolutePathBuf {
             })
         };
 
-        relative.ok_or_else(|| {
+        Ok(relative.ok_or_raise(|| {
             RelativeToParentError::InvalidParent(format!(
                 "'{}' is not a parent of '{}' ",
                 parent.display(),
                 self.display()
             ))
-        })
+        })?)
     }
 }
 
@@ -228,10 +237,12 @@ impl Display for AbsolutePathBuf {
     }
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum RelativeToParentError {
-    #[error("Invalid parent: {0}")]
+    #[error("RelativeToParentError::InvalidParent: '{0}'")]
     InvalidParent(String),
-    #[error("Io error: {0}")]
-    Io(PathBuf, std::io::Error),
+    #[error("RelativeToParentError::AbsolutePathBufError: '{0}'")]
+    AbsolutePathBufError(MyExn<AbsolutePathBufError>),
 }
+
+pub type RelativeToParentResult<T> = Result<T, MyExn<RelativeToParentError>>;

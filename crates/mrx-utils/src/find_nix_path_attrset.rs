@@ -9,6 +9,7 @@ use crate::{
     Config,
     ConfigValueError,
     PathAttrset,
+    attr::PathAttrsetResult,
 };
 
 fn get_config_ignore(config: &Config) -> Option<&PathBuf> {
@@ -26,10 +27,9 @@ fn get_config_ignore(config: &Config) -> Option<&PathBuf> {
         .and_then(|path| if path.exists() { Some(path) } else { None })
 }
 
-/// # Panics
-/// Panics if [`WalkBuilder`] somehow gives non-relative paths to [`PathAttrset::new`]
-#[must_use]
-pub fn find_nix_path_attrset(config: &Config) -> PathAttrset {
+/// # Errors
+/// Errors if the path attrset determined in the filesystem is invalid.
+pub fn find_nix_path_attrset(config: &Config) -> PathAttrsetResult<PathAttrset> {
     let mut builder = WalkBuilder::new(config.dir());
     builder.filter_entry(|entry| {
         entry.path().is_dir() || entry.file_name().to_string_lossy() == "main.nix"
@@ -45,5 +45,5 @@ pub fn find_nix_path_attrset(config: &Config) -> PathAttrset {
         .filter(|dir_entry| dir_entry.file_type().is_some_and(|ft| !ft.is_dir()))
         .map(|dir_entry| dir_entry.path().to_owned());
 
-    PathAttrset::new(paths).expect("Invalid paths were given by 'builder'")
+    PathAttrset::new(paths)
 }

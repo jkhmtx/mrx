@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 clap = { version = "4.5.53", features = ["derive"] }
+exn = "0.3.0"
 mrx-generate = { path = "../mrx-generate" }
 mrx-hook = { path = "../mrx-hook" }
 mrx-utils = { path = "../mrx-utils" }

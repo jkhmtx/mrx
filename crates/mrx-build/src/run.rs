@@ -5,8 +5,6 @@ use crate::{
     build::build,
 };
 
-/// # Panics
-/// TODO
 pub fn run(config: &Config, options: &Options) {
     if let Err(e) = build(config, options).map(|paths| {
         for p in paths {
