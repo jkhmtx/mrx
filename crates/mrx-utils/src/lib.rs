@@ -1,4 +1,5 @@
 mod ast;
+use exn as _;
 mod attr;
 mod build_and_symlink;
 mod config;

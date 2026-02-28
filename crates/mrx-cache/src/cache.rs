@@ -29,9 +29,7 @@ use mrx_utils::{
 use thiserror::Error as ThisError;
 
 use crate::{
-    DbError,
     Options,
-    WriteStoreError,
     get_mtime,
     get_store_bin_path,
     set_alias_mtime,
@@ -50,10 +48,10 @@ pub(crate) enum CacheError {
     Build(#[from] NixBuildError),
     #[error(transparent)]
     References(#[from] NixReferencesError),
-    #[error("Failed to read store: {0}")]
-    ReadStore(DbError),
-    #[error("Failed to write store: {0}")]
-    WriteStore(WriteStoreError),
+    // #[error("Failed to read store: {0}")]
+    // ReadStore(DbError),
+    #[error("Failed to write store")]
+    WriteStore,
     #[error("TODO: {0}")]
     Todo(&'static str),
 }
@@ -131,13 +129,14 @@ pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixSt
         .map(Attrname)
         .collect::<Vec<_>>();
 
-    let stale = find_stale_node_infos(config, &graph, &attrnames).map_err(|e| {
-        eprintln!("{e}");
-        CacheError::ReadStore(e)
-    })?;
+    let stale = find_stale_node_infos(config, &graph, &attrnames);
+    //     .map_err(|e| {
+    //     eprintln!("{e}");
+    //     CacheError::ReadStore(e)
+    // })?;
 
     for (_, node, file_mtime) in &stale {
-        set_mtime(node, *file_mtime).unwrap();
+        set_mtime(node, *file_mtime);
     }
 
     let to_build = match BuildStrategy::new(&attrnames, &stale)? {
@@ -183,24 +182,25 @@ pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixSt
         // First of two attempts to write the store path
         let write_store_result = write_store(&attrname, &path);
 
-        if matches!(write_store_result, Err(WriteStoreError::MissingAlias)) {
+        if write_store_result
+            .as_ref()
+            .is_err_and(|e| e.is_missing_alias())
+        {
             // If we failed to write the store, set the alias and try again
             if let Some((_, graph_node)) = graph.find_node(&NodeId::Attrname(attrname.clone())) {
                 let file_mtime = get_file_mtime(&graph_node.path);
 
                 set_alias_mtime(&attrname, &graph_node.path, file_mtime)
-                    .map_err(WriteStoreError::DbError)
-                    .and_then(|()| write_store(&attrname, &path))
+                    .map_err(|_| CacheError::WriteStore)
+                    .and_then(|()| {
+                        write_store(&attrname, &path).map_err(|_| CacheError::WriteStore)
+                    })
             } else {
                 Ok(())
             }
         } else {
-            write_store_result
-        }
-        .map_err(|e| {
-            eprintln!("{e}");
-            CacheError::WriteStore(e)
-        })?;
+            write_store_result.map_err(|_| CacheError::WriteStore)
+        }?;
     }
 
     Ok(out_paths
@@ -211,11 +211,16 @@ pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixSt
 
 type StaleNodeInfo<'a> = (usize, &'a GraphNode, UnixSeconds);
 
+// fn find_stale_node_infos<'a>(
+//     config: &Config,
+//     graph: &'a Graph,
+//     attrnames: &'a [Attrname],
+// ) -> Result<Vec<StaleNodeInfo<'a>>, DbError> {
 fn find_stale_node_infos<'a>(
     config: &Config,
     graph: &'a Graph,
     attrnames: &'a [Attrname],
-) -> Result<Vec<StaleNodeInfo<'a>>, DbError> {
+) -> Vec<StaleNodeInfo<'a>> {
     let mut stale_nodes = vec![];
     for (attrname_idx, node) in attrnames
         .iter()
@@ -224,7 +229,7 @@ fn find_stale_node_infos<'a>(
         .enumerate()
         .filter_map(|(attrname_idx, id)| graph.find_node(&id).map(|(_, node)| (attrname_idx, node)))
     {
-        if let Some(file_mtime) = is_stale(node)? {
+        if let Some(file_mtime) = is_stale(node) {
             stale_nodes.push((attrname_idx, node, file_mtime));
         } else {
             let dependencies = graph.find_dependencies_of(attrname_idx);
@@ -245,14 +250,14 @@ fn find_stale_node_infos<'a>(
                 .filter_map(|id| graph.find_node(&id))
                 .map(|(_, node)| node)
             {
-                if let Some(file_mtime) = is_stale(node)? {
+                if let Some(file_mtime) = is_stale(node) {
                     stale_nodes.push((attrname_idx, node, file_mtime));
                 }
             }
         }
     }
 
-    Ok(stale_nodes)
+    stale_nodes
 }
 
 fn get_file_mtime(path: impl AsRef<Path>) -> UnixSeconds {
@@ -267,22 +272,29 @@ fn get_file_mtime(path: impl AsRef<Path>) -> UnixSeconds {
         .unwrap_or_default()
 }
 
-fn is_stale(node: &GraphNode) -> Result<Option<UnixSeconds>, DbError> {
+// fn is_stale(node: &GraphNode) -> Result<Option<UnixSeconds>, DbError> {
+fn is_stale(node: &GraphNode) -> Option<UnixSeconds> {
     let file_mtime = get_file_mtime(&node.path);
 
     let node_id = NodeId::Path(node.path.clone());
 
-    if get_mtime(&node_id)?.is_none_or(|saved_mtime| saved_mtime < file_mtime) {
-        Ok(Some(file_mtime))
+    if get_mtime(&node_id)
+        .expect("this is temporary")
+        .is_none_or(|saved_mtime| saved_mtime < file_mtime)
+    {
+        Some(file_mtime)
     } else {
-        Ok(None)
+        None
     }
 }
 
-fn set_mtime(node: &GraphNode, mtime: UnixSeconds) -> Result<(), DbError> {
-    if let Some(attrname) = &node.derivation {
-        set_alias_mtime(attrname, &node.path, mtime)
+// fn set_mtime(node: &GraphNode, mtime: UnixSeconds) -> Result<(), DbError> {
+fn set_mtime(node: &GraphNode, mtime: UnixSeconds) {
+    let _: () = if let Some(attrname) = &node.derivation {
+        set_alias_mtime(attrname, &node.path, mtime).expect("this is temporary");
     } else {
-        set_node_mtime(&node.path, mtime).map(|_| {})
-    }
+        set_node_mtime(&node.path, mtime)
+            .map(|_| {})
+            .expect("this is temporary");
+    };
 }

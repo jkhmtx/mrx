@@ -1,4 +1,5 @@
 use clap as _;
+use exn as _;
 use mrx_generate::{
     Options,
     run,
