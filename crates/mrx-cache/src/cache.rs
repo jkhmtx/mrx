@@ -148,7 +148,7 @@ pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixSt
 
     let out_paths = build_command
         .execute()
-        .expect("temporary")
+        .map_err(|e| e.raise(CacheError::Static("Build command failed")))?
         .into_iter()
         .filter_map(|output| output.out)
         .collect::<Vec<_>>();

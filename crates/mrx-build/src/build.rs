@@ -90,7 +90,8 @@ pub(crate) fn build(config: &Config, options: &Options) -> BuildResult<Vec<Strin
         .ok_or(BuildError::NoEntrypoint)?;
 
     let mut paths = build_command
-        .execute()?
+        .execute()
+        .expect("temporary")
         .into_iter()
         .map(|NixBuildOutput { bin, out }| {
             bin.or(out.map(|path| NixStorePath::BinDir(path.into_string() + "/bin")))
