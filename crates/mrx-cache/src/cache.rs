@@ -155,7 +155,7 @@ pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixSt
 
     let reference_paths = NixReferencesCommand::new(out_paths.as_slice())
         .execute()
-        .expect("temporary")
+        .map_err(|e| e.raise(CacheError::Static("References command failed")))?
         .store_paths
         .into_iter()
         .filter_map(|path| match path {
