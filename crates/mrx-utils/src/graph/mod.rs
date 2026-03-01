@@ -41,6 +41,17 @@ impl GraphNode {
     }
 }
 
+impl std::fmt::Display for GraphNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(derivation) = &self.derivation {
+            f.write_str(derivation)
+        } else {
+            let path = &self.path.display().to_string();
+            f.write_str(path)
+        }
+    }
+}
+
 impl From<AbsolutePathBuf> for GraphNode {
     fn from(path: AbsolutePathBuf) -> Self {
         GraphNode {
