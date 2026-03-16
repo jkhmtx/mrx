@@ -140,15 +140,6 @@ impl AsRef<Path> for PathAttr {
 }
 
 impl PathAttr {
-    pub fn to_relative_path(&self, path_prefix: &str) -> Result<String, std::fmt::Error> {
-        let mut s = String::new();
-        let path = self.path.to_string_lossy();
-
-        write!(&mut s, "{path_prefix}{path}")?;
-
-        Ok(s)
-    }
-
     pub fn as_path(&self) -> &Path {
         &self.path
     }
