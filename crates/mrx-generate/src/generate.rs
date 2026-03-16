@@ -1,12 +1,15 @@
 use std::fmt::Write as _;
 
-use exn::ResultExt as _;
+use exn::{
+    ResultExt as _,
+    bail,
+};
 use mrx_utils::fs::{
-    WriteWithFallbackError,
     mk_dir,
     write_with_fallback,
 };
 use mrx_utils::{
+    Attrname,
     Config,
     NixAst,
     NixAstNodes,
@@ -19,14 +22,12 @@ use crate::Options;
 
 #[derive(Debug, ThisError)]
 pub(crate) enum GenerateError {
-    #[error("invalid destination `{0}`")]
-    InvalidDestination(String),
-    #[error("GenerateError::Failed: {0}")]
-    Failed(String),
-    #[error("Could not create file")]
-    IoError(#[from] std::io::Error),
-    #[error("Error constructing file string")]
-    FmtError(#[from] std::fmt::Error),
+    #[error("GenerateError::InvalidDestination: '{0}'")]
+    InvalidDestination(&'static str),
+    #[error("GenerateError::WriteBarrelFile")]
+    WriteBarrelFile,
+    #[error("GenerateError::WriteBin: could not write bin for '{0}'")]
+    WriteBin(Attrname),
 }
 
 type GenerateResult<T> = Result<T, exn::Exn<GenerateError>>;
@@ -38,10 +39,10 @@ fn write_barrel_file(config: &Config, attrset: &PathAttrset) -> GenerateResult<(
 
     if let Some(dir) = generated_dir {
         mk_dir(dir).or_raise(|| {
-            GenerateError::Failed("could not generate destination directory".to_string())
+            GenerateError::InvalidDestination("could not generate destination directory")
         })?;
     } else {
-        todo!("This case is reachable when config dir is the '/' directory.");
+        bail!(GenerateError::InvalidDestination("'/' has no parent"))
     }
 
     let num_components = destination.components().count();
@@ -54,8 +55,7 @@ fn write_barrel_file(config: &Config, attrset: &PathAttrset) -> GenerateResult<(
 
         let mut buf = String::new();
 
-        writeln!(&mut buf, "{{")
-            .or_raise(|| GenerateError::Failed("could not write barrel file".to_string()))?;
+        writeln!(&mut buf, "{{").or_raise(|| GenerateError::WriteBarrelFile)?;
 
         let mut attrnames = attrset.keys().cloned().collect::<Vec<_>>();
         attrnames.sort();
@@ -71,23 +71,15 @@ fn write_barrel_file(config: &Config, attrset: &PathAttrset) -> GenerateResult<(
 
             let name = name.replacen("_.", "", 1);
             writeln!(&mut buf, "  {name} = {prefix}{path};")
-                .or_raise(|| GenerateError::Failed("could not write barrel file".to_string()))?;
+                .or_raise(|| GenerateError::WriteBarrelFile)?;
         }
 
-        writeln!(&mut buf, "}}")
-            .or_raise(|| GenerateError::Failed("could not write barrel file".to_string()))?;
+        writeln!(&mut buf, "}}").or_raise(|| GenerateError::WriteBarrelFile)?;
 
         buf
     };
 
-    write_with_fallback(buf.as_bytes(), &destination).map_err(|e| match e {
-        WriteWithFallbackError::InvalidDest(e) => {
-            exn::Exn::from(GenerateError::InvalidDestination(e.to_string()))
-        }
-        WriteWithFallbackError::Failed(e) | WriteWithFallbackError::RolledBack(e) => {
-            exn::Exn::from(GenerateError::IoError(e))
-        }
-    })
+    write_with_fallback(buf.as_bytes(), &destination).or_raise(|| GenerateError::WriteBarrelFile)
 }
 
 fn write_name_files(attrset: &PathAttrset) -> GenerateResult<()> {
@@ -100,9 +92,7 @@ fn write_name_files(attrset: &PathAttrset) -> GenerateResult<()> {
     });
 
     for (attr_name, name_dir) in name_dir_pairs {
-        mk_dir(&name_dir).or_raise(|| {
-            GenerateError::Failed(format!("failed to write dir for attr: '{attr_name}'"))
-        })?;
+        mk_dir(&name_dir).or_raise(|| GenerateError::WriteBin(attr_name.clone()))?;
 
         let name = {
             let mut name = String::new();
@@ -111,7 +101,7 @@ fn write_name_files(attrset: &PathAttrset) -> GenerateResult<()> {
                 .and_then(|()| writeln!(&mut name, "\"{attr_name}\""))
                 .map(|()| name)
         }
-        .or_raise(|| GenerateError::Failed(format!("could not write bin for {attr_name}")))?;
+        .or_raise(|| GenerateError::WriteBin(attr_name.clone()))?;
 
         let path = name_dir.join("default.nix");
         if let Ok(buf) = std::fs::read(&path)
@@ -121,7 +111,7 @@ fn write_name_files(attrset: &PathAttrset) -> GenerateResult<()> {
         }
 
         std::fs::write(&path, name.as_bytes())
-            .or_raise(|| GenerateError::Failed(format!("could not write bin for {attr_name}")))?;
+            .or_raise(|| GenerateError::WriteBin(attr_name.clone()))?;
     }
 
     Ok(())

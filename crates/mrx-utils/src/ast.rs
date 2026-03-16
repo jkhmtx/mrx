@@ -83,6 +83,7 @@ fn walk(syntax_node: &rnix::SyntaxNode, nodes: &mut Vec<NixAst>) {
     }
 }
 
+// TODO: This one
 #[derive(Debug, ThisError)]
 pub enum NixAstNodesError {
     #[error("Not a nix file: {0}")]

@@ -10,7 +10,7 @@ pub struct NixReferencesCommand<'a> {
 
 #[derive(Debug, ThisError)]
 pub enum NixReferencesError {
-    #[error("NixReferencesError::Command: failed to start 'nix {command_string}'")]
+    #[error("NixReferencesError::Command: 'nix-store {command_string}'")]
     Command {
         command_string: String,
         #[source]

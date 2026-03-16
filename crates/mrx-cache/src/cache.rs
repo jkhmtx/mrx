@@ -36,6 +36,7 @@ use crate::{
     write_store,
 };
 
+// TODO: This one
 #[derive(Debug, ThisError)]
 pub(crate) enum CacheError {
     #[error("CacheError::Static: {0}")]
@@ -114,6 +115,7 @@ pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixSt
 
     let graph =
         Graph::new(config).or_raise(|| CacheError::Static("Failed to create dependency graph"))?;
+    // TODO: This one
     // .map_err(|e| e.raise(CacheError::Static("Failed to create dependency graph")))?;
 
     let attrnames = options
@@ -139,14 +141,11 @@ pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixSt
 
     eprintln!("Rebuilding {}", &to_build.join(" "));
 
-    let build_command = config
-        .get_entrypoint()
-        .map(|entrypoint| NixBuildCommand::new(entrypoint, &to_build))
-        .ok_or(CacheError::Static(
-            "No fallback entrypoint 'flake.nix' or 'default.nix' found",
-        ))?;
+    let entrypoint = config.get_entrypoint().ok_or(CacheError::Static(
+        "No fallback entrypoint 'flake.nix' or 'default.nix' found",
+    ))?;
 
-    let out_paths = build_command
+    let out_paths = NixBuildCommand::new(entrypoint, &to_build)
         .execute()
         .map_err(|e| e.raise(CacheError::Static("Build command failed")))?
         .into_iter()

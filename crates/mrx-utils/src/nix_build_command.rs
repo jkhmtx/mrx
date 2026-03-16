@@ -18,7 +18,7 @@ pub struct NixBuildCommand<'a> {
 
 #[derive(Debug, ThisError)]
 pub enum NixBuildError {
-    #[error("NixBuildError::Command: failed to start 'nix {command_string}'")]
+    #[error("NixBuildError::Command: 'nix {command_string}'")]
     Command {
         command_string: String,
         #[source]

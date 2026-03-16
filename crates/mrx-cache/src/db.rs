@@ -30,7 +30,7 @@ pub enum ConnectError {
 pub enum DbError {
     #[error("DbError::Connect")]
     Connect,
-    #[error("Failed to query: {0}")]
+    #[error("DbError::Query\n\n{0}")]
     Query(DbQueryError),
     #[error("DbError::Statement")]
     Statement,

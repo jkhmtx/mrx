@@ -23,20 +23,21 @@ pub(crate) enum BuildError {
     NoEntrypoint,
     #[error("BuildError::NixBuildCommand")]
     NixBuildCommand,
-    #[error("BuildError::BinCacheRefresh: {0}")]
-    BinCacheRefresh(&'static str),
+    #[error("BuildError::FailedToResetBinDir")]
+    FailedToResetBinDir,
+    #[error("BuildError::FailedToGetExe")]
+    FailedToGetExe,
+    #[error("BuildError::FailedToWriteBin")]
+    FailedToWriteBin,
 }
 
 type BuildResult<T> = Result<T, exn::Exn<BuildError>>;
 
-fn reset_bin_dir(bin_dir: &Path) -> BuildResult<()> {
-    recreate_dir(bin_dir)
-        .or_raise(|| BuildError::BinCacheRefresh("failed to recreate bin directory"))
-}
-
 fn write_bin_dir(bin_dir: &Path, config: &Config) -> BuildResult<()> {
     let bins = find_bin_attrnames(config);
     let cached_sh = include_str!("cached.sh");
+
+    let this_mrx_bin = std::env::current_exe().or_raise(|| BuildError::FailedToGetExe)?;
 
     for bin in bins {
         let path = bin_dir.join(&bin.0);
@@ -44,27 +45,21 @@ fn write_bin_dir(bin_dir: &Path, config: &Config) -> BuildResult<()> {
         let buf = {
             let mut buf = String::new();
 
-            let this_mrx_bin = std::env::current_exe()
-                .map_err(|_| BuildError::BinCacheRefresh("failed to get exe"))?;
-
             let env_vars = [
                 ("__MRX_DERIVATION", bin.to_string().into()),
                 ("__MRX_THIS_MRX_BIN", this_mrx_bin.to_string_lossy()),
             ];
 
             for (k, v) in env_vars {
-                writeln!(&mut buf, "export {k}={v}")
-                    .map_err(|_| BuildError::BinCacheRefresh("failed to write bin script"))?;
+                writeln!(&mut buf, "export {k}={v}").or_raise(|| BuildError::FailedToWriteBin)?;
             }
 
-            write!(&mut buf, "\n{cached_sh}")
-                .map_err(|_| BuildError::BinCacheRefresh("failed to write bin script"))?;
+            write!(&mut buf, "\n{cached_sh}").or_raise(|| BuildError::FailedToWriteBin)?;
 
             buf
         };
 
-        write_cache_file(&path, &buf)
-            .or_raise(|| BuildError::BinCacheRefresh("failed to write bin script"))?;
+        write_cache_file(&path, &buf).or_raise(|| BuildError::FailedToWriteBin)?;
     }
 
     Ok(())
@@ -115,7 +110,7 @@ pub(crate) fn build(config: &Config, options: &Options) -> BuildResult<Vec<Strin
             dir.join("bin")
         };
 
-        reset_bin_dir(&bin_dir)?;
+        recreate_dir(&bin_dir).or_raise(|| BuildError::FailedToResetBinDir)?;
         write_bin_dir(&bin_dir, config)?;
 
         // If sourced by PATH_add in order,
