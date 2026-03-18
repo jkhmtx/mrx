@@ -1,5 +1,4 @@
 use std::{
-    io::ErrorKind,
     ops::Deref,
     path::{
         Path,
@@ -7,6 +6,10 @@ use std::{
     },
 };
 
+use exn::{
+    ResultExt,
+    bail,
+};
 use thiserror::Error as ThisError;
 
 use crate::fs::is_nix;
@@ -83,32 +86,12 @@ fn walk(syntax_node: &rnix::SyntaxNode, nodes: &mut Vec<NixAst>) {
     }
 }
 
-// TODO: This one
 #[derive(Debug, ThisError)]
 pub enum NixAstNodesError {
-    #[error("Not a nix file: {0}")]
+    #[error("NixAstNodesError::NotNix: '{0}'")]
     NotNix(PathBuf),
-    #[error("Missing or invalid file: {0}")]
+    #[error("NixAstNodesError::MissingOrInvalidFile: '{0}'")]
     MissingOrInvalidFile(PathBuf),
-    #[error("Io error: {0}")]
-    Io(std::io::Error),
-}
-
-impl<TPath: AsRef<Path>> From<(TPath, std::io::Error)> for NixAstNodesError {
-    fn from((path, err): (TPath, std::io::Error)) -> Self {
-        match err.kind() {
-            ErrorKind::NotFound => {
-                NixAstNodesError::MissingOrInvalidFile(path.as_ref().to_path_buf())
-            }
-            _ => NixAstNodesError::Io(err),
-        }
-    }
-}
-
-impl<TPath: AsRef<Path>> From<(TPath, std::string::FromUtf8Error)> for NixAstNodesError {
-    fn from((path, _): (TPath, std::string::FromUtf8Error)) -> Self {
-        NixAstNodesError::MissingOrInvalidFile(path.as_ref().to_path_buf())
-    }
 }
 
 type NixAstNodesDeref = Vec<NixAst>;
@@ -124,16 +107,21 @@ impl Deref for NixAstNodes {
     }
 }
 
+type NixAstNodesResult<T> = Result<T, exn::Exn<NixAstNodesError>>;
+
 impl NixAstNodes {
     /// # Errors
-    /// TODO
-    pub fn new(path: impl AsRef<Path>) -> Result<Self, NixAstNodesError> {
+    /// Errors if the provided file is not a nix file, or if the file contents cannot be read.
+    pub fn new(path: impl AsRef<Path>) -> NixAstNodesResult<Self> {
         if !is_nix(&path) {
-            return Err(NixAstNodesError::NotNix(path.as_ref().to_path_buf()));
+            bail!(NixAstNodesError::NotNix(path.as_ref().to_path_buf()));
         }
 
-        let buf = std::fs::read(&path).map_err(|e| (path.as_ref(), e))?;
-        let file = String::from_utf8(buf).map_err(|e| (path, e))?;
+        let buf = std::fs::read(&path)
+            .or_raise(|| NixAstNodesError::MissingOrInvalidFile(path.as_ref().to_path_buf()))?;
+
+        let file = String::from_utf8(buf)
+            .or_raise(|| NixAstNodesError::MissingOrInvalidFile(path.as_ref().to_path_buf()))?;
 
         let root = rnix::Root::parse(&file).syntax();
         let mut nodes = vec![];

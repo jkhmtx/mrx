@@ -201,7 +201,6 @@ impl Display for AbsolutePathBuf {
     }
 }
 
-// TODO: Use this one, it's always unwrapped
 #[derive(Debug, ThisError)]
 pub enum RelativeToParentError {
     #[error("Invalid parent: {0}")]

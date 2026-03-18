@@ -19,7 +19,9 @@ use crate::cli::Options;
 
 #[derive(Debug, ThisError)]
 pub(crate) enum BuildError {
-    #[error("BuildError::NoEntrypoint: 'flake.nix' or 'default.nix' not found")]
+    #[error(
+        "BuildError::GettingEntrypoint: custom entrypoint, 'flake.nix' or 'default.nix' not found"
+    )]
     NoEntrypoint,
     #[error("BuildError::NixBuildCommand")]
     NixBuildCommand,

@@ -11,15 +11,17 @@ use std::{
     },
 };
 
-mod error;
-use error::GraphError;
+use exn::{
+    OptionExt,
+    ResultExt,
+};
 
 use crate::{
     Config,
+    NixAstNodesError,
     ast::{
         NixAst,
         NixAstNodes,
-        NixAstNodesError,
     },
     attr::Attrname,
     find_nix_path_attrset,
@@ -41,6 +43,27 @@ impl GraphNode {
         &self.path
     }
 }
+
+use thiserror::Error as ThisError;
+
+#[derive(Debug, ThisError)]
+pub enum GraphError {
+    #[error(
+        "GraphError::GettingEntrypoint: custom entrypoint, 'flake.nix' or 'default.nix' not found"
+    )]
+    GettingEntrypoint,
+    #[error("GraphError::InvalidNode")]
+    InvalidNode,
+    #[error(
+        "GraphError::RelativePath: relative path from parent '{parent}' does not exist\n\npath: {path}\nparent: {parent}"
+    )]
+    RelativePath {
+        path: String,
+        parent: AbsolutePathBuf,
+    },
+}
+
+type GraphResult<T> = Result<T, exn::Exn<GraphError>>;
 
 impl std::fmt::Display for GraphNode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -82,23 +105,18 @@ fn from_relative(path: &Path, relative_to: &AbsolutePathBuf) -> Option<PathBuf> 
 fn try_from_relative<T: ?Sized + AsRef<OsStr>>(
     path: &T,
     parent: &AbsolutePathBuf,
-) -> Result<AbsolutePathBuf, GraphError> {
+) -> GraphResult<AbsolutePathBuf> {
     let path = PathBuf::from(path);
     if let Some(path) = from_relative(&path, parent) {
-        AbsolutePathBuf::try_from(path.as_path()).map_err(|e| match e {
-            AbsolutePathBufError::NotFound => {
-                let path = path.display();
-                GraphError::MissingNode(format!(
-                    "relative path '{path}' from parent '{parent}' does not exist"
-                ))
-            }
-            AbsolutePathBufError::Io(error) => GraphError::Io(error),
+        AbsolutePathBuf::try_from(path.as_path()).or_raise(|| GraphError::RelativePath {
+            path: path.display().to_string(),
+            parent: parent.clone(),
         })
     } else {
-        let path = path.display();
-        Err(GraphError::MissingNode(format!(
-            "relative path '{path}' from parent '{parent}' does not exist"
-        )))
+        Err(exn::Exn::from(GraphError::RelativePath {
+            path: path.display().to_string(),
+            parent: parent.clone(),
+        }))
     }
 }
 
@@ -106,7 +124,7 @@ fn get_idx_or_create_node(
     lookup: &HashMap<NodeId, usize>,
     parent: &AbsolutePathBuf,
     node: &NixAst,
-) -> Result<Option<GraphNodeOrIdx>, GraphError> {
+) -> GraphResult<Option<GraphNodeOrIdx>> {
     match node {
         NixAst::ImportOwnNameModuleExpression => Ok(None),
         NixAst::SimplePath { path } => {
@@ -138,7 +156,8 @@ fn get_idx_or_create_node(
             Ok(None)
         }
         NixAst::MrxDerivation { name } => {
-            let attrname = Attrname::try_from(name.as_str())?;
+            let attrname =
+                Attrname::try_from(name.as_str()).or_raise(|| GraphError::InvalidNode)?;
 
             if attrname.is_internal() {
                 return Ok(None);
@@ -215,12 +234,12 @@ pub struct Graph {
 impl Graph {
     /// # Errors
     /// TODO
-    pub fn new(config: &Config) -> Result<Self, GraphError> {
-        let entrypoint = config.get_entrypoint().ok_or(GraphError::NoEntrypoint)?;
-        let path = AbsolutePathBuf::try_from(entrypoint.as_ref()).map_err(|e| match e {
-            AbsolutePathBufError::NotFound => GraphError::NoEntrypoint,
-            AbsolutePathBufError::Io(e) => GraphError::Io(e),
-        })?;
+    pub fn new(config: &Config) -> GraphResult<Self> {
+        let entrypoint = config
+            .get_entrypoint()
+            .ok_or_raise(|| GraphError::GettingEntrypoint)?;
+        let path = AbsolutePathBuf::try_from(entrypoint.as_ref())
+            .or_raise(|| GraphError::GettingEntrypoint)?;
 
         let mut graph = Self {
             edges: Vec::default(),
@@ -247,8 +266,9 @@ impl Graph {
                     Ok(())
                 }
                 Err(AbsolutePathBufError::NotFound) => Ok(()),
-                Err(AbsolutePathBufError::Io(e)) => Err(GraphError::Io(e)),
-            }?;
+                Err(AbsolutePathBufError::Io(e)) => Err(e),
+            }
+            .or_raise(|| GraphError::InvalidNode)?;
         }
 
         let mut visited = HashSet::default();
@@ -302,7 +322,7 @@ impl Graph {
         lookup: &mut HashMap<NodeId, usize>,
         visited: &mut HashSet<usize>,
         idx: usize,
-    ) -> Result<(), GraphError> {
+    ) -> GraphResult<()> {
         let parent = {
             let node = &self.nodes[idx];
             &node.path.clone()
@@ -312,9 +332,11 @@ impl Graph {
 
         if let Some(nodes) = match NixAstNodes::new(parent) {
             Ok(ast) => Ok(Some(ast)),
-            Err(NixAstNodesError::NotNix(_)) => Ok(None),
+            Err(e) if matches!(*e, NixAstNodesError::NotNix(_)) => Ok(None),
             Err(e) => Err(e),
-        }? {
+        }
+        .or_raise(|| GraphError::InvalidNode)?
+        {
             for ast_node in nodes.iter() {
                 match get_idx_or_create_node(lookup, parent, ast_node)? {
                     Some(GraphNodeOrIdx::Idx(existing_idx)) => {

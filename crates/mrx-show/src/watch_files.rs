@@ -1,3 +1,4 @@
+use exn::ResultExt;
 use mrx_utils::{
     Attrname,
     Config,
@@ -7,13 +8,29 @@ use mrx_utils::{
         NodeId,
     },
 };
+use thiserror::Error as ThisError;
 
 use crate::cli::WatchFilesOptions;
 
-pub(crate) fn watch_files(config: &Config, options: &WatchFilesOptions) -> Vec<String> {
-    let graph = Graph::new(config).unwrap();
-    let generated_out_path =
-        AbsolutePathBuf::try_from(config.get_generated_out_path().as_path()).unwrap();
+#[derive(Debug, ThisError)]
+pub(crate) enum ShowWatchFilesError {
+    #[error("WatchFilesError::CreatingGraph")]
+    CreatingGraph,
+    #[error("WatchFilesError::GettingGeneratedPaths")]
+    GettingGeneratedPaths,
+    #[error("WatchFilesError::InvalidPaths")]
+    InvalidPaths,
+}
+
+type ShowWatchFilesResult<T> = Result<T, exn::Exn<ShowWatchFilesError>>;
+
+pub(crate) fn watch_files(
+    config: &Config,
+    options: &WatchFilesOptions,
+) -> ShowWatchFilesResult<Vec<String>> {
+    let graph = Graph::new(config).map_err(|e| e.raise(ShowWatchFilesError::CreatingGraph))?;
+    let generated_out_path = AbsolutePathBuf::try_from(config.get_generated_out_path().as_path())
+        .or_raise(|| ShowWatchFilesError::GettingGeneratedPaths)?;
 
     {
         let mut files = if options.derivations.is_empty() {
@@ -41,13 +58,16 @@ pub(crate) fn watch_files(config: &Config, options: &WatchFilesOptions) -> Vec<S
         }
         .into_iter()
         .filter(|path| **path != generated_out_path)
-        .map(|path| path.as_relative_to_parent(&config.dir()).unwrap())
-        .map(|path| path.to_string_lossy().to_string())
-        .collect::<Vec<_>>();
+        .map(|path| {
+            path.as_relative_to_parent(&config.dir())
+                .map(|path| path.to_string_lossy().to_string())
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .or_raise(|| ShowWatchFilesError::InvalidPaths)?;
 
         files.dedup();
         files.sort();
 
-        files
+        Ok(files)
     }
 }

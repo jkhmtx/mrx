@@ -5,6 +5,7 @@ use std::{
 };
 
 use exn::{
+    OptionExt,
     ResultExt,
     bail,
 };
@@ -28,6 +29,7 @@ use thiserror::Error as ThisError;
 
 use crate::{
     Options,
+    WriteStoreError,
     get_mtime,
     get_store_bin_path,
     set_alias_mtime,
@@ -36,15 +38,24 @@ use crate::{
     write_store,
 };
 
-// TODO: This one
 #[derive(Debug, ThisError)]
 pub(crate) enum CacheError {
-    #[error("CacheError::Static: {0}")]
-    Static(&'static str),
-    #[error("CacheError::Build: {0}")]
-    Build(String),
-    #[error("CacheError::StoreNode: {0}: {1}")]
-    StoreNode(GraphNode, &'static str),
+    #[error("CacheError::NoDerivationsProvided: Provide at least one as a positional argument.")]
+    NoDerivationsProvided,
+    #[error("CacheError::CreatingGraph")]
+    CreatingGraph,
+    #[error(
+        "CacheError::GettingEntrypoint: custom entrypoint, 'flake.nix' or 'default.nix' not found"
+    )]
+    GettingEntrypoint,
+    #[error("CacheError::NixBuild")]
+    NixBuild,
+    #[error("CacheError::NixReferences")]
+    NixReferences,
+    #[error("CacheError::Build: failed to get store bin paths for attrname: '{0}'")]
+    Build(Attrname),
+    #[error("CacheError::GettingOrSettingStoreNodeMtime")]
+    GettingOrSettingStoreNodeMtime,
     #[error("CacheError::WriteStore")]
     WriteStore,
 }
@@ -64,11 +75,7 @@ impl BuildStrategy {
                     .iter()
                     .filter_map(|attrname| {
                         get_store_bin_path(attrname)
-                            .map_err(|e| {
-                                e.raise(CacheError::Build(format!(
-                                    "failed to get store bin paths for attrname: '{attrname}'"
-                                )))
-                            })
+                            .map_err(|e| e.raise(CacheError::Build(attrname.clone())))
                             .transpose()
                     })
                     .collect::<Result<Vec<_>, _>>()?,
@@ -108,15 +115,10 @@ impl BuildStrategy {
 /// TODO
 pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixStorePath>> {
     if options.derivations.is_empty() {
-        bail!(CacheError::Static(
-            "No derivations provided. Provide at least one as a positional argument."
-        ));
+        bail!(CacheError::NoDerivationsProvided);
     }
 
-    let graph =
-        Graph::new(config).or_raise(|| CacheError::Static("Failed to create dependency graph"))?;
-    // TODO: This one
-    // .map_err(|e| e.raise(CacheError::Static("Failed to create dependency graph")))?;
+    let graph = Graph::new(config).or_raise(|| CacheError::CreatingGraph)?;
 
     let attrnames = options
         .derivations
@@ -141,20 +143,20 @@ pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixSt
 
     eprintln!("Rebuilding {}", &to_build.join(" "));
 
-    let entrypoint = config.get_entrypoint().ok_or(CacheError::Static(
-        "No fallback entrypoint 'flake.nix' or 'default.nix' found",
-    ))?;
+    let entrypoint = config
+        .get_entrypoint()
+        .ok_or_raise(|| CacheError::GettingEntrypoint)?;
 
     let out_paths = NixBuildCommand::new(entrypoint, &to_build)
         .execute()
-        .map_err(|e| e.raise(CacheError::Static("Build command failed")))?
+        .map_err(|e| e.raise(CacheError::NixBuild))?
         .into_iter()
         .filter_map(|output| output.out)
         .collect::<Vec<_>>();
 
     let reference_paths = NixReferencesCommand::new(out_paths.as_slice())
         .execute()
-        .map_err(|e| e.raise(CacheError::Static("References command failed")))?
+        .map_err(|e| e.raise(CacheError::NixReferences))?
         .store_paths
         .into_iter()
         .filter_map(|path| match path {
@@ -175,7 +177,7 @@ pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixSt
         // (1/2) attempts to write the store path
         match write_store(&attrname, &path) {
             Ok(()) => Ok(()),
-            Err(e) if e.is_missing_alias() => {
+            Err(e) if matches!(*e, WriteStoreError::MissingAlias) => {
                 // final attempt
                 let (_, graph_node) = graph
                     .find_node(&NodeId::Attrname(attrname.clone()))
@@ -184,13 +186,13 @@ pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixSt
                 let file_mtime = get_file_mtime(&graph_node.path);
 
                 set_alias_mtime(&attrname, &graph_node.path, file_mtime)
-                    .map_err(|e| e.raise(CacheError::WriteStore))?;
+                    .or_raise(|| CacheError::WriteStore)?;
 
                 write_store(&attrname, &path)
             }
             Err(e) => Err(e),
         }
-        .map_err(|e| e.raise(CacheError::WriteStore))?;
+        .or_raise(|| CacheError::WriteStore)?;
     }
 
     Ok(out_paths
@@ -264,12 +266,7 @@ fn is_stale(node: &GraphNode) -> CacheResult<Option<UnixSeconds>> {
 
     Ok(
         if get_mtime(&node_id)
-            .map_err(|e| {
-                e.raise(CacheError::StoreNode(
-                    node.clone(),
-                    "failed to get mtime for node",
-                ))
-            })?
+            .map_err(|e| e.raise(CacheError::GettingOrSettingStoreNodeMtime))?
             .is_none_or(|saved_mtime| saved_mtime < file_mtime)
         {
             Some(file_mtime)
@@ -285,5 +282,5 @@ fn set_mtime(node: &GraphNode, mtime: UnixSeconds) -> CacheResult<()> {
     } else {
         set_node_mtime(&node.path, mtime).map(|_| {})
     }
-    .or_raise(|| CacheError::StoreNode(node.clone(), "failed to set mtime for node"))
+    .or_raise(|| CacheError::GettingOrSettingStoreNodeMtime)
 }
