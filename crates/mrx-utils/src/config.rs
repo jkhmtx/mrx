@@ -43,7 +43,7 @@ pub struct Config {
 
 impl Config {
     /// # Errors
-    /// TODO
+    /// See [`ConfigInitError`].
     pub fn default_init() -> Result<Self, ConfigInitError> {
         Self::try_from(PathBuf::from(DEFAULT_CONFIG_PATH))
     }
@@ -51,9 +51,9 @@ impl Config {
 
 #[derive(Debug, ThisError)]
 pub enum ConfigValueError {
-    #[error("value `{0}` is missing")]
+    #[error("ConfigValueError::MissingValue: '{0}'")]
     MissingValue(String),
-    #[error("Io")]
+    #[error("ConfigValudError::Io: '{0}'")]
     Io(#[from] std::io::Error),
 }
 
@@ -108,7 +108,7 @@ impl Config {
     }
 
     /// # Errors
-    /// TODO
+    /// Errors if `ignore_file` is not present in the config, since there is no default.
     pub fn get_ignore_file(&self) -> ConfigValueResult<&PathBuf> {
         self.toml
             .ignore_file
@@ -140,13 +140,14 @@ impl Config {
     }
 }
 
+// TODO: This one
 #[derive(Debug, ThisError)]
 pub enum ConfigInitError {
-    #[error("file `{0}` not found")]
+    #[error("ConfigInitError::NotFound: '{0}'")]
     NotFound(PathBuf),
-    #[error("invalid toml: {0}")]
+    #[error("ConfigInitError::InvalidToml: '{0}'")]
     InvalidToml(#[from] toml::de::Error),
-    #[error("error reading config file")]
+    #[error("ConfigInitError::ReadError")]
     ReadError(#[from] std::io::Error),
 }
 
@@ -202,6 +203,6 @@ where
     Self: Sized,
 {
     /// # Errors
-    /// TODO
+    /// TODO: .......
     fn create_mrx_cli_args() -> ConfigInitResult<(Config, Self)>;
 }

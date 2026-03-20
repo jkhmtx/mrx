@@ -110,7 +110,7 @@ impl BuildStrategy {
 }
 
 /// # Errors
-/// TODO
+/// See [`CacheError`].
 pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixStorePath>> {
     if options.derivations.is_empty() {
         bail!(CacheError::NoDerivationsProvided);

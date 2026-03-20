@@ -4,9 +4,9 @@ use std::path::{
 };
 
 mod absolute_path_buf;
-mod write_with_fallback;
+mod write_with_rollback;
 pub use absolute_path_buf::*;
-pub use write_with_fallback::write_with_fallback;
+pub use write_with_rollback::write_with_rollback;
 
 #[must_use]
 pub fn pathbuf_if_exists(path: &str) -> Option<PathBuf> {
@@ -20,13 +20,13 @@ pub fn pathbuf_if_exists(path: &str) -> Option<PathBuf> {
 }
 
 /// # Errors
-/// TODO
+/// Errors if recursively creating the directory fails for a reason insular to [`std::io::Error`].
 pub fn mk_dir(path: &Path) -> Result<(), std::io::Error> {
     std::fs::DirBuilder::new().recursive(true).create(path)
 }
 
 /// # Errors
-/// TODO
+/// Errors if removing the directory or creating it after removal (see [`mk_dir`]) fails.
 pub fn recreate_dir(path: &Path) -> Result<(), std::io::Error> {
     match std::fs::remove_dir_all(path) {
         Ok(()) => mk_dir(path),

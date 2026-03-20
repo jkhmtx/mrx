@@ -10,13 +10,15 @@ pub struct NixReferencesCommand<'a> {
 
 #[derive(Debug, ThisError)]
 pub enum NixReferencesError {
+    /// This error is yieled when the command fails to start due to an IO or permission problem.
     #[error("NixReferencesError::Command: 'nix-store {command_string}'")]
     Command {
         command_string: String,
         #[source]
         io_err: std::io::Error,
     },
-    #[error("NixReferencesError::Failed: {0}")]
+    /// This error is yieled when there is an error in the execution of the nix-store command.
+    #[error("NixReferencesError::Failed: '{0}'")]
     Failed(String),
 }
 
@@ -36,7 +38,7 @@ pub type NixReferencesCommandResult<T> = Result<T, exn::Exn<NixReferencesError>>
 
 impl NixReferencesCommand<'_> {
     /// # Errors
-    /// TODO
+    /// See [`NixReferencesError`].
     pub fn execute(self) -> NixReferencesCommandResult<NixReferencesOutput> {
         let mut args: Vec<&str> = vec!["--query", "--requisites"];
 

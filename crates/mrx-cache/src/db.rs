@@ -77,7 +77,7 @@ fn get_connection() -> DbResult<Connection, ConnectError> {
 }
 
 /// # Errors
-/// TODO
+/// See [`DbError`] and [`ConnectError`].
 pub fn get_mtime(node_id: &NodeId) -> DbResult<Option<UnixSeconds>, DbError> {
     let connection = get_connection().or_raise(|| DbError::Connect)?;
 
@@ -125,7 +125,7 @@ pub fn get_mtime(node_id: &NodeId) -> DbResult<Option<UnixSeconds>, DbError> {
 }
 
 /// # Errors
-/// TODO
+/// See [`DbError`] and [`ConnectError`].
 pub fn set_node_mtime(path: &AbsolutePathBuf, mtime: UnixSeconds) -> DbResult<i64, DbError> {
     let connection = get_connection().or_raise(|| DbError::Connect)?;
 
@@ -151,7 +151,7 @@ ON CONFLICT (path)
 }
 
 /// # Errors
-/// TODO
+/// See [`DbError`] and [`ConnectError`].
 pub fn set_alias_mtime(
     alias: &Attrname,
     path: &AbsolutePathBuf,
@@ -183,7 +183,7 @@ ON CONFLICT (alias)
 }
 
 /// # Errors
-/// TODO
+/// See [`DbError`] and [`ConnectError`].
 pub fn get_store_bin_path(alias: &Attrname) -> DbResult<Option<NixStorePath>, DbError> {
     let connection = get_connection().or_raise(|| DbError::Connect)?;
 
@@ -231,7 +231,8 @@ impl WriteStoreError {
 type WriteStoreResult = DbResult<(), WriteStoreError>;
 
 /// # Errors
-/// TODO
+/// Errors if there is an underlying database error (see [`DbResult`]), or if the alias-to-write doesn't exist in the database.
+/// In the missing alias case, a retry after writing the alias is suitable for error handling.
 pub fn write_store(alias: &Attrname, store_path: &NixStorePath) -> WriteStoreResult {
     let connection = get_connection()
         .or_raise(|| DbError::Connect)

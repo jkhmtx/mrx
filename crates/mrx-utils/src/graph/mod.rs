@@ -235,7 +235,7 @@ pub struct Graph {
 
 impl Graph {
     /// # Errors
-    /// TODO
+    /// See [`GraphError`].
     pub fn new(config: &Config) -> GraphResult<Self> {
         let entrypoint = config
             .get_entrypoint()

@@ -6,10 +6,17 @@ use crate::{
 };
 
 pub fn run(config: &Config, options: &Options) {
-    let bins = hook(config, options);
+    match hook(config, options) {
+        Ok(bins) => {
+            eprintln!("The following commands are available in your shell:");
+            for bin in bins {
+                eprintln!("  - {bin}");
+            }
+        }
+        Err(e) => {
+            eprintln!("{e}");
 
-    eprintln!("The following commands are available in your shell:");
-    for bin in bins {
-        eprintln!("  - {bin}");
+            std::process::exit(1);
+        }
     }
 }

@@ -6,7 +6,7 @@ use exn::{
 };
 use mrx_utils::fs::{
     mk_dir,
-    write_with_fallback,
+    write_with_rollback,
 };
 use mrx_utils::{
     Attrname,
@@ -81,7 +81,7 @@ fn write_barrel_file(config: &Config, attrset: &PathAttrset) -> GenerateResult<(
         buf
     };
 
-    write_with_fallback(buf.as_bytes(), &destination).or_raise(|| GenerateError::WriteBarrelFile)
+    write_with_rollback(buf.as_bytes(), &destination).or_raise(|| GenerateError::WriteBarrelFile)
 }
 
 fn write_name_files(attrset: &PathAttrset) -> GenerateResult<()> {
@@ -120,7 +120,7 @@ fn write_name_files(attrset: &PathAttrset) -> GenerateResult<()> {
 }
 
 /// # Errors
-/// TODO
+/// See [`GenerateError`].
 pub(crate) fn generate(config: &Config, _options: &Options) -> GenerateResult<()> {
     let attrset = find_nix_path_attrset(config).or_raise(|| GenerateError::GettingPathAttrset)?;
 

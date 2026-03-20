@@ -18,14 +18,17 @@ pub struct NixBuildCommand<'a> {
 
 #[derive(Debug, ThisError)]
 pub enum NixBuildError {
+    /// This error is yieled when the command fails to start due to an IO or permission problem.
     #[error("NixBuildError::Command: 'nix {command_string}'")]
     Command {
         command_string: String,
         #[source]
         io_err: std::io::Error,
     },
+    /// This error is yieled when there is an issue with deserializing the JSON stdout given by the underlying nix command.
     #[error("NixBuildError::Deserialization")]
     Deserialization,
+    /// This error is yieled when there is an error in the execution of the nix command.
     #[error("NixBuildError::Failed: {0}")]
     Failed(String),
 }
@@ -80,7 +83,7 @@ type NixBuildResult<T> = Result<T, exn::Exn<NixBuildError>>;
 
 impl NixBuildCommand<'_> {
     /// # Errors
-    /// TODO
+    /// See [`NixBuildError`].
     pub fn execute(self) -> NixBuildResult<Vec<NixBuildOutput>> {
         let mut args: Vec<String> = ["build", "--no-warn-dirty", "--json", "--no-link"]
             .into_iter()

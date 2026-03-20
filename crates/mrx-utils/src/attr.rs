@@ -182,7 +182,7 @@ pub enum PathAttrsetError {
 
 type PathAttrsetDeref = HashMap<Attrname, PathAttr>;
 
-pub type PathAttrsetResult<T> = Result<T, exn::Exn<PathAttrsetError>>;
+pub(crate) type PathAttrsetResult<T> = Result<T, exn::Exn<PathAttrsetError>>;
 
 #[derive(Debug, Default)]
 pub struct PathAttrset(PathAttrsetDeref);

@@ -23,6 +23,8 @@ pub(crate) enum BuildError {
         "BuildError::GettingEntrypoint: custom entrypoint, 'flake.nix' or 'default.nix' not found"
     )]
     NoEntrypoint,
+    #[error("BuildError::GettingBinAttrnames")]
+    GettingBinAttrnames,
     #[error("BuildError::NixBuildCommand")]
     NixBuildCommand,
     #[error("BuildError::FailedToResetBinDir")]
@@ -36,7 +38,7 @@ pub(crate) enum BuildError {
 type BuildResult<T> = Result<T, exn::Exn<BuildError>>;
 
 fn write_bin_dir(bin_dir: &Path, config: &Config) -> BuildResult<()> {
-    let bins = find_bin_attrnames(config);
+    let bins = find_bin_attrnames(config).or_raise(|| BuildError::GettingBinAttrnames)?;
     let cached_sh = include_str!("cached.sh");
 
     let this_mrx_bin = std::env::current_exe().or_raise(|| BuildError::FailedToGetExe)?;
@@ -79,7 +81,7 @@ fn write_cache_file(path: &std::path::PathBuf, buf: &str) -> Result<(), std::io:
 }
 
 /// # Errors
-/// TODO
+/// See [`BuildError`].
 pub(crate) fn build(config: &Config, options: &Options) -> BuildResult<Vec<String>> {
     if options.generate {
         mrx_generate::run(config, &mrx_generate::Options::default());
