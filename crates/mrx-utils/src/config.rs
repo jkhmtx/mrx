@@ -6,6 +6,7 @@ use std::{
     },
 };
 
+use exn::ResultExt as _;
 use serde::Deserialize;
 
 const DEFAULT_CONFIG_PATH: &str = "mrx.toml";
@@ -41,11 +42,40 @@ pub struct Config {
     default_entrypoint: Option<Entrypoint>,
 }
 
+pub type ConfigInitResult<T> = Result<T, exn::Exn<ConfigInitError>>;
+
 impl Config {
     /// # Errors
     /// See [`ConfigInitError`].
-    pub fn default_init() -> Result<Self, ConfigInitError> {
-        Self::try_from(PathBuf::from(DEFAULT_CONFIG_PATH))
+    pub fn default_init() -> ConfigInitResult<Self> {
+        Self::try_from_str(DEFAULT_CONFIG_PATH)
+    }
+
+    /// # Errors
+    /// See [`ConfigInitError`].
+    pub fn try_from_str(path: impl AsRef<str>) -> ConfigInitResult<Self> {
+        let path = PathBuf::from(path.as_ref());
+        let file = fs::read(&path).map_err(|e| {
+            use std::io::ErrorKind as IoErr;
+            match e.kind() {
+                IoErr::NotFound => ConfigInitError::NotFound(path.clone()),
+                _ => ConfigInitError::ReadError(e),
+            }
+        })?;
+
+        let toml: ConfigToml = toml::from_slice(&file).or_raise(|| ConfigInitError::InvalidToml)?;
+
+        let default_entrypoint = pathbuf_if_exists("./flake.nix")
+            .map(Entrypoint::Flake)
+            .or_else(|| pathbuf_if_exists("./default.nix").map(Entrypoint::File));
+
+        Ok(Self {
+            path,
+            toml,
+            default_generated_out_path: PathBuf::from("mrx.generated.nix"),
+            default_installables: vec![],
+            default_entrypoint,
+        })
     }
 }
 
@@ -145,57 +175,10 @@ impl Config {
 pub enum ConfigInitError {
     #[error("ConfigInitError::NotFound: '{0}'")]
     NotFound(PathBuf),
-    #[error("ConfigInitError::InvalidToml: '{0}'")]
-    InvalidToml(#[from] toml::de::Error),
+    #[error("ConfigInitError::InvalidToml")]
+    InvalidToml,
     #[error("ConfigInitError::ReadError")]
     ReadError(#[from] std::io::Error),
-}
-
-pub type ConfigInitResult<T> = Result<T, ConfigInitError>;
-
-impl<S: Into<String>> TryFrom<Option<S>> for Config {
-    type Error = ConfigInitError;
-
-    fn try_from(path: Option<S>) -> Result<Self, Self::Error> {
-        path.map(S::into)
-            .map_or_else(Self::default_init, Self::try_from)
-    }
-}
-
-impl TryFrom<String> for Config {
-    type Error = ConfigInitError;
-
-    fn try_from(path: String) -> Result<Self, Self::Error> {
-        Self::try_from(PathBuf::from(path))
-    }
-}
-
-impl TryFrom<PathBuf> for Config {
-    type Error = ConfigInitError;
-
-    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
-        let file = fs::read(&path).map_err(|e| {
-            use std::io::ErrorKind as IoErr;
-            match e.kind() {
-                IoErr::NotFound => ConfigInitError::NotFound(path.clone()),
-                _ => ConfigInitError::ReadError(e),
-            }
-        })?;
-
-        let toml: ConfigToml = toml::from_slice(&file)?;
-
-        let default_entrypoint = pathbuf_if_exists("./flake.nix")
-            .map(Entrypoint::Flake)
-            .or_else(|| pathbuf_if_exists("./default.nix").map(Entrypoint::File));
-
-        Ok(Self {
-            path,
-            toml,
-            default_generated_out_path: PathBuf::from("mrx.generated.nix"),
-            default_installables: vec![],
-            default_entrypoint,
-        })
-    }
 }
 
 pub trait MrxCli
@@ -203,6 +186,6 @@ where
     Self: Sized,
 {
     /// # Errors
-    /// TODO: .......
+    /// See [`ConfigInitError`].
     fn create_mrx_cli_args() -> ConfigInitResult<(Config, Self)>;
 }

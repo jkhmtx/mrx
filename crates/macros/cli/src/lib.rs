@@ -49,7 +49,7 @@ pub fn mrx_cli_derive(input: TokenStream) -> TokenStream {
 
                 cli.config
                     .clone()
-                    .map_or_else(Config::default_init, Config::try_from)
+                    .map_or_else(Config::default_init, Config::try_from_str)
                     .map(|config| (config, cli))
             }
         }
