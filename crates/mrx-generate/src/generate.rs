@@ -22,6 +22,8 @@ use crate::Options;
 
 #[derive(Debug, ThisError)]
 pub(crate) enum GenerateError {
+    #[error("GenerateError::GettingPathAttrset")]
+    GettingPathAttrset,
     #[error("GenerateError::InvalidDestination: '{0}'")]
     InvalidDestination(&'static str),
     #[error("GenerateError::WriteBarrelFile")]
@@ -119,10 +121,8 @@ fn write_name_files(attrset: &PathAttrset) -> GenerateResult<()> {
 
 /// # Errors
 /// TODO
-/// # Panics
-/// TODO
 pub(crate) fn generate(config: &Config, _options: &Options) -> GenerateResult<()> {
-    let attrset = find_nix_path_attrset(config);
+    let attrset = find_nix_path_attrset(config).or_raise(|| GenerateError::GettingPathAttrset)?;
 
     write_barrel_file(config, &attrset)?;
     write_name_files(&attrset)?;

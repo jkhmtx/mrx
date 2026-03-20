@@ -94,13 +94,6 @@ impl TryFrom<PathBuf> for Entrypoint {
 type ConfigValueResult<T> = Result<T, ConfigValueError>;
 
 impl Config {
-    /// # Panics
-    /// TODO
-    #[must_use]
-    pub fn dir_absolute(&self) -> PathBuf {
-        fs::canonicalize(self.dir()).unwrap()
-    }
-
     #[must_use]
     pub fn dir(&self) -> PathBuf {
         self.path

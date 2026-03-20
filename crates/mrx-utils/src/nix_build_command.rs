@@ -81,8 +81,6 @@ type NixBuildResult<T> = Result<T, exn::Exn<NixBuildError>>;
 impl NixBuildCommand<'_> {
     /// # Errors
     /// TODO
-    /// # Panics
-    /// TODO
     pub fn execute(self) -> NixBuildResult<Vec<NixBuildOutput>> {
         let mut args: Vec<String> = ["build", "--no-warn-dirty", "--json", "--no-link"]
             .into_iter()
@@ -115,23 +113,22 @@ impl NixBuildCommand<'_> {
             })?;
 
         if let Some(input_string) = input_string {
-            let mut stdin = build_cmd
-                .stdin
-                .take()
-                .expect("stdin handle was not properly provided");
-
-            let args = args.clone();
-            if let Err(e) = std::thread::spawn(move || {
-                stdin
-                    .write_all(input_string.as_bytes())
-                    .map_err(|e| NixBuildError::Command {
-                        command_string: args.join(" "),
-                        io_err: e,
-                    })
-            })
-            .join()
-            {
-                std::panic::resume_unwind(e);
+            if let Some(mut stdin) = build_cmd.stdin.take() {
+                let args = args.clone();
+                if let Err(e) = std::thread::spawn(move || {
+                    stdin
+                        .write_all(input_string.as_bytes())
+                        .map_err(|e| NixBuildError::Command {
+                            command_string: args.join(" "),
+                            io_err: e,
+                        })
+                })
+                .join()
+                {
+                    std::panic::resume_unwind(e);
+                }
+            } else {
+                unreachable!("stdin handle was not properly provided")
             }
         }
 

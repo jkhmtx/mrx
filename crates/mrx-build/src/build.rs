@@ -80,8 +80,6 @@ fn write_cache_file(path: &std::path::PathBuf, buf: &str) -> Result<(), std::io:
 
 /// # Errors
 /// TODO
-/// # Panics
-/// TODO
 pub(crate) fn build(config: &Config, options: &Options) -> BuildResult<Vec<String>> {
     if options.generate {
         mrx_generate::run(config, &mrx_generate::Options::default());

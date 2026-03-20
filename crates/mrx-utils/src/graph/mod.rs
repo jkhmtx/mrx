@@ -52,6 +52,8 @@ pub enum GraphError {
         "GraphError::GettingEntrypoint: custom entrypoint, 'flake.nix' or 'default.nix' not found"
     )]
     GettingEntrypoint,
+    #[error("GraphError::GettingPathAttrset")]
+    GettingPathAttrset,
     #[error("GraphError::InvalidNode")]
     InvalidNode,
     #[error(
@@ -250,7 +252,8 @@ impl Graph {
 
         graph.add_node(&mut lookup, GraphNode::from(path.clone()));
 
-        let known_attrs = find_nix_path_attrset(config);
+        let known_attrs =
+            find_nix_path_attrset(config).or_raise(|| GraphError::GettingPathAttrset)?;
 
         let known_nodes = known_attrs.iter().map(|(attrname, p)| {
             AbsolutePathBuf::try_from(p).map(|path| GraphNode {

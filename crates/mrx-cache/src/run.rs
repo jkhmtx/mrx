@@ -8,8 +8,6 @@ use crate::{
     cache::cache,
 };
 
-/// ### Panics
-/// TODO
 pub fn run(config: &Config, options: &Options) {
     match cache(config, options) {
         Err(e) => {

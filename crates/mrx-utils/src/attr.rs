@@ -182,13 +182,15 @@ pub enum PathAttrsetError {
 
 type PathAttrsetDeref = HashMap<Attrname, PathAttr>;
 
+pub type PathAttrsetResult<T> = Result<T, exn::Exn<PathAttrsetError>>;
+
 #[derive(Debug, Default)]
 pub struct PathAttrset(PathAttrsetDeref);
 
 impl PathAttrset {
     /// # Errors
     /// An error is returned if any of the paths are not relative paths beginning with "./"
-    pub fn new(paths: impl IntoIterator<Item = PathBuf>) -> Result<Self, PathAttrsetError> {
+    pub fn new(paths: impl IntoIterator<Item = PathBuf>) -> PathAttrsetResult<Self> {
         let mut attrset = Self(PathAttrsetDeref::new());
 
         for path in paths {

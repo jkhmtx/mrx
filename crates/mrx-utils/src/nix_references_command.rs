@@ -37,8 +37,6 @@ pub type NixReferencesCommandResult<T> = Result<T, exn::Exn<NixReferencesError>>
 impl NixReferencesCommand<'_> {
     /// # Errors
     /// TODO
-    /// # Panics
-    /// TODO
     pub fn execute(self) -> NixReferencesCommandResult<NixReferencesOutput> {
         let mut args: Vec<&str> = vec!["--query", "--requisites"];
 

@@ -5,8 +5,13 @@ use crate::{
     show::show,
 };
 
-/// # Panics
-/// TODO
 pub fn run(config: &Config, options: &Options) {
-    show(config, options).unwrap();
+    match show(config, options) {
+        Ok(()) => {}
+        Err(e) => {
+            eprintln!("{e}");
+
+            std::process::exit(1);
+        }
+    }
 }
