@@ -268,8 +268,8 @@ impl Graph {
                     graph.add_node(&mut lookup, node);
                     Ok(())
                 }
-                Err(AbsolutePathBufError::NotFound) => Ok(()),
-                Err(AbsolutePathBufError::Io(e)) => Err(e),
+                Err(e) if matches!(*e, AbsolutePathBufError::NotFound) => Ok(()),
+                Err(e) => Err(e),
             }
             .or_raise(|| GraphError::InvalidNode)?;
         }

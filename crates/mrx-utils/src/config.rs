@@ -170,7 +170,6 @@ impl Config {
     }
 }
 
-// TODO: This one
 #[derive(Debug, ThisError)]
 pub enum ConfigInitError {
     #[error("ConfigInitError::NotFound: '{0}'")]
