@@ -1,6 +1,6 @@
 use std::env;
-use std::env::VarError;
 
+use exn::ResultExt;
 use mrx_utils::Attrname;
 use mrx_utils::fs::AbsolutePathBuf;
 use mrx_utils::graph::NodeId;
@@ -12,26 +12,28 @@ use rusqlite::{
     Result,
     Statement,
 };
-use thiserror::Error;
+use thiserror::Error as ThisError;
 
 use crate::unix_seconds::UnixSeconds;
 
-#[derive(Debug, Error)]
+pub type DbResult<T, E> = Result<T, exn::Exn<E>>;
+
+#[derive(Debug, Clone, Copy, ThisError)]
 pub enum ConnectError {
-    #[error("Environment error: {0}")]
-    Environment(#[from] VarError),
-    #[error("{0}")]
-    Connect(#[from] rusqlite::Error),
+    #[error("ConnectError::Environment")]
+    Environment,
+    #[error("ConnectError::Connect")]
+    Connect,
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, ThisError)]
 pub enum DbError {
-    #[error("Failed to connect: {0}")]
-    Connect(#[from] ConnectError),
-    #[error("Failed to query: {0}")]
+    #[error("DbError::Connect")]
+    Connect,
+    #[error("DbError::Query\n\n{0}")]
     Query(DbQueryError),
-    #[error("Failed to build statement: {0}")]
-    Statement(#[from] rusqlite::Error),
+    #[error("DbError::Statement")]
+    Statement,
 }
 
 impl DbError {
@@ -68,16 +70,16 @@ SQL:
 
 impl core::error::Error for DbQueryError {}
 
-fn get_connection() -> Result<Connection, ConnectError> {
-    let database_path = env::var("DATABASE_PATH")?;
+fn get_connection() -> DbResult<Connection, ConnectError> {
+    let database_path = env::var("DATABASE_PATH").or_raise(|| ConnectError::Environment)?;
 
-    Ok(Connection::open(&database_path)?)
+    Connection::open(&database_path).or_raise(|| ConnectError::Connect)
 }
 
 /// # Errors
-/// TODO
-pub fn get_mtime(node_id: &NodeId) -> Result<Option<UnixSeconds>, DbError> {
-    let connection = get_connection()?;
+/// See [`DbError`] and [`ConnectError`].
+pub fn get_mtime(node_id: &NodeId) -> DbResult<Option<UnixSeconds>, DbError> {
+    let connection = get_connection().or_raise(|| DbError::Connect)?;
 
     let (sql, params) = match &node_id {
         NodeId::Attrname(name) => (
@@ -110,7 +112,8 @@ pub fn get_mtime(node_id: &NodeId) -> Result<Option<UnixSeconds>, DbError> {
         ),
     };
 
-    let mut statement = connection.prepare(sql)?;
+    let mut statement = connection.prepare(sql).or_raise(|| DbError::Statement)?;
+
     statement
         .query_row(params, |row| {
             let w: i64 = row.get(0)?;
@@ -118,22 +121,25 @@ pub fn get_mtime(node_id: &NodeId) -> Result<Option<UnixSeconds>, DbError> {
         })
         .optional()
         .map_err(DbError::query_error_with(statement))
+        .map_err(exn::Exn::from)
 }
 
 /// # Errors
-/// TODO
-pub fn set_node_mtime(path: &AbsolutePathBuf, mtime: UnixSeconds) -> Result<i64, DbError> {
-    let connection = get_connection()?;
+/// See [`DbError`] and [`ConnectError`].
+pub fn set_node_mtime(path: &AbsolutePathBuf, mtime: UnixSeconds) -> DbResult<i64, DbError> {
+    let connection = get_connection().or_raise(|| DbError::Connect)?;
 
-    let mut statement = connection.prepare(
-        "
+    let mut statement = connection
+        .prepare(
+            "
 INSERT INTO node (path, mtime)
     VALUES (:path, :mtime)
 ON CONFLICT (path)
     DO UPDATE SET
         mtime = :mtime;
             ",
-    )?;
+        )
+        .or_raise(|| DbError::Statement)?;
 
     statement
         .insert(named_params! {
@@ -141,27 +147,30 @@ ON CONFLICT (path)
             ":mtime": mtime.to_sql(),
         })
         .map_err(DbError::query_error_with(statement))
+        .map_err(exn::Exn::from)
 }
 
 /// # Errors
-/// TODO
+/// See [`DbError`] and [`ConnectError`].
 pub fn set_alias_mtime(
     alias: &Attrname,
     path: &AbsolutePathBuf,
     mtime: UnixSeconds,
-) -> Result<(), DbError> {
-    let connection = get_connection()?;
+) -> DbResult<(), DbError> {
+    let connection = get_connection().or_raise(|| DbError::Connect)?;
 
     let id = set_node_mtime(path, mtime)?;
 
-    let mut statement = connection.prepare(
-        "
+    let mut statement = connection
+        .prepare(
+            "
 INSERT INTO alias (alias, node_id)
     VALUES (:alias, :id)
 ON CONFLICT (alias)
     DO NOTHING;
 ",
-    )?;
+        )
+        .or_raise(|| DbError::Statement)?;
 
     statement
         .execute(named_params! {
@@ -170,15 +179,17 @@ ON CONFLICT (alias)
         })
         .map(|_| ())
         .map_err(DbError::query_error_with(statement))
+        .map_err(exn::Exn::from)
 }
 
 /// # Errors
-/// TODO
-pub fn get_store_bin_path(alias: &Attrname) -> Result<Option<NixStorePath>, DbError> {
-    let connection = get_connection()?;
+/// See [`DbError`] and [`ConnectError`].
+pub fn get_store_bin_path(alias: &Attrname) -> DbResult<Option<NixStorePath>, DbError> {
+    let connection = get_connection().or_raise(|| DbError::Connect)?;
 
-    let mut statement = connection.prepare(
-        "
+    let mut statement = connection
+        .prepare(
+            "
         SELECT
             store_path
         FROM
@@ -187,7 +198,8 @@ pub fn get_store_bin_path(alias: &Attrname) -> Result<Option<NixStorePath>, DbEr
         WHERE
             alias.alias = :alias;
         ",
-    )?;
+        )
+        .or_raise(|| DbError::Statement)?;
 
     statement
         .query_row(
@@ -198,43 +210,33 @@ pub fn get_store_bin_path(alias: &Attrname) -> Result<Option<NixStorePath>, DbEr
         )
         .optional()
         .map_err(DbError::query_error_with(statement))
+        .map_err(exn::Exn::from)
 }
 
-#[derive(Debug, Error)]
+#[derive(Debug, Clone, Copy, ThisError)]
 pub enum WriteStoreError {
-    #[error(transparent)]
-    DbError(DbError),
-    #[error("MissingAlias")]
+    #[error("WriteStoreError:DbError")]
+    DbError,
+    #[error("WriteStoreError::MissingAlias")]
     MissingAlias,
 }
 
-impl From<ConnectError> for WriteStoreError {
-    fn from(value: ConnectError) -> Self {
-        WriteStoreError::DbError(value.into())
+impl WriteStoreError {
+    #[must_use]
+    pub fn is_missing_alias(&self) -> bool {
+        matches!(self, WriteStoreError::MissingAlias)
     }
 }
 
-impl From<DbError> for WriteStoreError {
-    fn from(value: DbError) -> Self {
-        match value {
-            DbError::Statement(_) | DbError::Connect(_) => value.into(),
-            DbError::Query(e) => {
-                if let Some(rusqlite::ErrorCode::ConstraintViolation) = e.0.sqlite_error_code() {
-                    Self::MissingAlias
-                } else {
-                    WriteStoreError::DbError(DbError::Query(e))
-                }
-            }
-        }
-    }
-}
-
-type WriteStoreResult = Result<(), WriteStoreError>;
+type WriteStoreResult = DbResult<(), WriteStoreError>;
 
 /// # Errors
-/// TODO
+/// Errors if there is an underlying database error (see [`DbResult`]), or if the alias-to-write doesn't exist in the database.
+/// In the missing alias case, a retry after writing the alias is suitable for error handling.
 pub fn write_store(alias: &Attrname, store_path: &NixStorePath) -> WriteStoreResult {
-    let connection = get_connection()?;
+    let connection = get_connection()
+        .or_raise(|| DbError::Connect)
+        .map_err(|e| e.raise(WriteStoreError::DbError))?;
 
     let mut statement = connection
         .prepare(
@@ -252,13 +254,16 @@ ON CONFLICT(alias_id)
 DO UPDATE SET store_path = excluded.store_path;
 ",
         )
-        .map_err(DbError::from)?;
+        .or_raise(|| DbError::Statement)
+        .map_err(|e| e.raise(WriteStoreError::DbError))?;
 
-    Ok(statement
+    statement
         .insert(named_params! {
             ":alias": alias.to_string(),
             ":store_path": store_path.clone().into_string(),
         })
         .map(|_| ())
-        .map_err(DbError::query_error_with(statement))?)
+        .map_err(DbError::query_error_with(statement))
+        .map_err(exn::Exn::from)
+        .map_err(|e| e.raise(WriteStoreError::DbError))
 }

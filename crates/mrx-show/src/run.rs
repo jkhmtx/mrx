@@ -6,5 +6,12 @@ use crate::{
 };
 
 pub fn run(config: &Config, options: &Options) {
-    show(config, options);
+    match show(config, options) {
+        Ok(()) => {}
+        Err(e) => {
+            eprintln!("{e}");
+
+            std::process::exit(1);
+        }
+    }
 }

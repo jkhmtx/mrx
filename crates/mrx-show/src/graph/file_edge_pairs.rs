@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use exn::ResultExt as _;
 use mrx_utils::{
     Config,
     graph::{
@@ -8,22 +9,35 @@ use mrx_utils::{
         GraphNode,
     },
 };
+use thiserror::Error as ThisError;
 
-fn display(node: &GraphNode, dir: &Path) -> String {
-    node.as_path()
-        .as_relative_to_parent(dir)
-        .unwrap()
-        .to_string_lossy()
-        .to_string()
+#[derive(Debug, ThisError)]
+pub(crate) enum FileEdgePairsError {
+    #[error("WatchFilesError::CreatingGraph")]
+    CreatingGraph,
+    #[error("FileEdgePairsError::CalculatingRelativePath")]
+    CalculatingRelativePath,
 }
 
-pub(super) fn file_edge_pairs(config: &Config) -> Vec<(String, String)> {
-    let graph = Graph::new(config).unwrap();
+type FileEdgePairsResult<T> = Result<T, exn::Exn<FileEdgePairsError>>;
+
+fn display(node: &GraphNode, dir: &Path) -> FileEdgePairsResult<String> {
+    Ok(node
+        .as_path()
+        .as_relative_to_parent(dir)
+        .or_raise(|| FileEdgePairsError::CalculatingRelativePath)?
+        .to_string_lossy()
+        .to_string())
+}
+
+pub(super) fn file_edge_pairs(config: &Config) -> FileEdgePairsResult<Vec<(String, String)>> {
+    let graph = Graph::new(config).map_err(|e| e.raise(FileEdgePairsError::CreatingGraph))?;
 
     let dir = config.dir();
     graph
         .to_edges()
         .into_iter()
         .map(|Edge(a, b)| (display(&a, &dir), display(&b, &dir)))
-        .collect::<Vec<_>>()
+        .map(|(a, b)| a.and_then(|a| b.map(|b| (a, b))))
+        .collect::<Result<Vec<_>, _>>()
 }

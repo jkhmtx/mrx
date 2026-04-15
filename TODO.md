@@ -1,6 +1,5 @@
 - build(mrx/package): package binaries individually
 - build(mrx/package): static binaries
-- chore(mrx/core): improve MissingNode error experience
 - docs(docs): Nice README
 - docs(mrx/api): "how to use" for each binary command
 - docs(mrx/api): document public APIs properly

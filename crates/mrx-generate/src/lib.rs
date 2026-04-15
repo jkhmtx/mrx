@@ -1,4 +1,5 @@
 mod cli;
+use exn as _;
 mod generate;
 mod run;
 
