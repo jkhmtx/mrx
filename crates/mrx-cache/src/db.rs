@@ -70,7 +70,7 @@ SQL:
 
 impl core::error::Error for DbQueryError {}
 
-fn get_connection() -> DbResult<Connection, ConnectError> {
+pub(crate) fn get_connection() -> DbResult<Connection, ConnectError> {
     let database_path = env::var("DATABASE_PATH").or_raise(|| ConnectError::Environment)?;
 
     Connection::open(&database_path).or_raise(|| ConnectError::Connect)
@@ -78,9 +78,10 @@ fn get_connection() -> DbResult<Connection, ConnectError> {
 
 /// # Errors
 /// See [`DbError`] and [`ConnectError`].
-pub fn get_mtime(node_id: &NodeId) -> DbResult<Option<UnixSeconds>, DbError> {
-    let connection = get_connection().or_raise(|| DbError::Connect)?;
-
+pub fn get_mtime(
+    connection: &Connection,
+    node_id: &NodeId,
+) -> DbResult<Option<UnixSeconds>, DbError> {
     let (sql, params) = match &node_id {
         NodeId::Attrname(name) => (
             "
@@ -126,9 +127,11 @@ pub fn get_mtime(node_id: &NodeId) -> DbResult<Option<UnixSeconds>, DbError> {
 
 /// # Errors
 /// See [`DbError`] and [`ConnectError`].
-pub fn set_node_mtime(path: &AbsolutePathBuf, mtime: UnixSeconds) -> DbResult<i64, DbError> {
-    let connection = get_connection().or_raise(|| DbError::Connect)?;
-
+pub fn set_node_mtime(
+    connection: &Connection,
+    path: &AbsolutePathBuf,
+    mtime: UnixSeconds,
+) -> DbResult<i64, DbError> {
     let mut statement = connection
         .prepare(
             "
@@ -153,13 +156,12 @@ ON CONFLICT (path)
 /// # Errors
 /// See [`DbError`] and [`ConnectError`].
 pub fn set_alias_mtime(
+    connection: &Connection,
     alias: &Attrname,
     path: &AbsolutePathBuf,
     mtime: UnixSeconds,
 ) -> DbResult<(), DbError> {
-    let connection = get_connection().or_raise(|| DbError::Connect)?;
-
-    let id = set_node_mtime(path, mtime)?;
+    let id = set_node_mtime(connection, path, mtime)?;
 
     let mut statement = connection
         .prepare(
@@ -184,9 +186,10 @@ ON CONFLICT (alias)
 
 /// # Errors
 /// See [`DbError`] and [`ConnectError`].
-pub fn get_store_bin_path(alias: &Attrname) -> DbResult<Option<NixStorePath>, DbError> {
-    let connection = get_connection().or_raise(|| DbError::Connect)?;
-
+pub fn get_store_bin_path(
+    connection: &Connection,
+    alias: &Attrname,
+) -> DbResult<Option<NixStorePath>, DbError> {
     let mut statement = connection
         .prepare(
             "
@@ -233,11 +236,11 @@ type WriteStoreResult = DbResult<(), WriteStoreError>;
 /// # Errors
 /// Errors if there is an underlying database error (see [`DbResult`]), or if the alias-to-write doesn't exist in the database.
 /// In the missing alias case, a retry after writing the alias is suitable for error handling.
-pub fn write_store(alias: &Attrname, store_path: &NixStorePath) -> WriteStoreResult {
-    let connection = get_connection()
-        .or_raise(|| DbError::Connect)
-        .map_err(|e| e.raise(WriteStoreError::DbError))?;
-
+pub fn write_store(
+    connection: &Connection,
+    alias: &Attrname,
+    store_path: &NixStorePath,
+) -> WriteStoreResult {
     let mut statement = connection
         .prepare(
             "

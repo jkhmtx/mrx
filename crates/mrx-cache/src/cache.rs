@@ -25,11 +25,13 @@ use mrx_utils::{
         NixStorePath,
     },
 };
+use rusqlite::Connection;
 use thiserror::Error as ThisError;
 
 use crate::{
     Options,
     WriteStoreError,
+    get_connection,
     get_mtime,
     get_store_bin_path,
     set_alias_mtime,
@@ -38,10 +40,16 @@ use crate::{
     write_store,
 };
 
+pub(crate) struct Dependencies {
+    pub(crate) connection: Connection,
+}
+
 #[derive(Debug, ThisError)]
 pub(crate) enum CacheError {
     #[error("CacheError::NoDerivationsProvided: Provide at least one as a positional argument.")]
     NoDerivationsProvided,
+    #[error("CacheError::DependencyInit")]
+    DependencyInit,
     #[error("CacheError::CreatingGraph")]
     CreatingGraph,
     #[error(
@@ -68,13 +76,17 @@ enum BuildStrategy {
 }
 
 impl BuildStrategy {
-    fn new(attrnames: &[Attrname], stale: &[StaleNodeInfo]) -> CacheResult<Self> {
+    fn new(
+        connection: &Connection,
+        attrnames: &[Attrname],
+        stale: &[StaleNodeInfo],
+    ) -> CacheResult<Self> {
         let binpaths = if stale.is_empty() {
             Some(
                 attrnames
                     .iter()
                     .filter_map(|attrname| {
-                        get_store_bin_path(attrname)
+                        get_store_bin_path(connection, attrname)
                             .map_err(|e| e.raise(CacheError::Build(attrname.clone())))
                             .transpose()
                     })
@@ -116,6 +128,10 @@ pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixSt
         bail!(CacheError::NoDerivationsProvided);
     }
 
+    let dependencies = get_connection()
+        .map(|connection| Dependencies { connection })
+        .or_raise(|| CacheError::DependencyInit)?;
+
     let graph = Graph::new(config).or_raise(|| CacheError::CreatingGraph)?;
 
     let attrnames = options
@@ -125,13 +141,13 @@ pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixSt
         .map(Attrname)
         .collect::<Vec<_>>();
 
-    let stale = find_stale_node_infos(config, &graph, &attrnames)?;
+    let stale = find_stale_node_infos(&dependencies, config, &graph, &attrnames)?;
 
     for (_, node, file_mtime) in &stale {
-        set_mtime(node, *file_mtime)?;
+        set_mtime(&dependencies.connection, node, *file_mtime)?;
     }
 
-    let to_build = match BuildStrategy::new(&attrnames, &stale)? {
+    let to_build = match BuildStrategy::new(&dependencies.connection, &attrnames, &stale)? {
         BuildStrategy::UseCached(paths) => return Ok(paths),
         BuildStrategy::Build(attrnames) => attrnames
             .iter()
@@ -173,7 +189,7 @@ pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixSt
 
     for (path, attrname) in reference_paths {
         // (1/2) attempts to write the store path
-        match write_store(&attrname, &path) {
+        match write_store(&dependencies.connection, &attrname, &path) {
             Ok(()) => Ok(()),
             Err(e) if matches!(*e, WriteStoreError::MissingAlias) => {
                 // final attempt
@@ -183,10 +199,15 @@ pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixSt
 
                 let file_mtime = get_file_mtime(&graph_node.path);
 
-                set_alias_mtime(&attrname, &graph_node.path, file_mtime)
-                    .or_raise(|| CacheError::WriteStore)?;
+                set_alias_mtime(
+                    &dependencies.connection,
+                    &attrname,
+                    &graph_node.path,
+                    file_mtime,
+                )
+                .or_raise(|| CacheError::WriteStore)?;
 
-                write_store(&attrname, &path)
+                write_store(&dependencies.connection, &attrname, &path)
             }
             Err(e) => Err(e),
         }
@@ -202,6 +223,7 @@ pub(crate) fn cache(config: &Config, options: &Options) -> CacheResult<Vec<NixSt
 type StaleNodeInfo<'a> = (usize, &'a GraphNode, UnixSeconds);
 
 fn find_stale_node_infos<'a>(
+    dependencies: &Dependencies,
     config: &Config,
     graph: &'a Graph,
     attrnames: &'a [Attrname],
@@ -214,16 +236,16 @@ fn find_stale_node_infos<'a>(
         .enumerate()
         .filter_map(|(attrname_idx, id)| graph.find_node(&id).map(|(_, node)| (attrname_idx, node)))
     {
-        if let Some(file_mtime) = is_stale(node)? {
+        if let Some(file_mtime) = is_stale(&dependencies.connection, node)? {
             stale_nodes.push((attrname_idx, node, file_mtime));
         } else {
-            let dependencies = graph.find_dependencies_of(attrname_idx);
+            let dependency_nodes = graph.find_dependencies_of(attrname_idx);
 
             let generated_out_path =
                 AbsolutePathBuf::try_from(config.get_generated_out_path().as_path())
                     .expect("generated out path must be resolvable");
 
-            for node in dependencies
+            for node in dependency_nodes
                 .values()
                 .filter(|node| node.path != generated_out_path)
                 .map(|node| {
@@ -235,7 +257,7 @@ fn find_stale_node_infos<'a>(
                 .filter_map(|id| graph.find_node(&id))
                 .map(|(_, node)| node)
             {
-                if let Some(file_mtime) = is_stale(node)? {
+                if let Some(file_mtime) = is_stale(&dependencies.connection, node)? {
                     stale_nodes.push((attrname_idx, node, file_mtime));
                 }
             }
@@ -257,13 +279,13 @@ fn get_file_mtime(path: impl AsRef<Path>) -> UnixSeconds {
         .unwrap_or_default()
 }
 
-fn is_stale(node: &GraphNode) -> CacheResult<Option<UnixSeconds>> {
+fn is_stale(connection: &Connection, node: &GraphNode) -> CacheResult<Option<UnixSeconds>> {
     let file_mtime = get_file_mtime(&node.path);
 
     let node_id = NodeId::Path(node.path.clone());
 
     Ok(
-        if get_mtime(&node_id)
+        if get_mtime(connection, &node_id)
             .map_err(|e| e.raise(CacheError::GettingOrSettingStoreNodeMtime))?
             .is_none_or(|saved_mtime| saved_mtime < file_mtime)
         {
@@ -274,11 +296,11 @@ fn is_stale(node: &GraphNode) -> CacheResult<Option<UnixSeconds>> {
     )
 }
 
-fn set_mtime(node: &GraphNode, mtime: UnixSeconds) -> CacheResult<()> {
+fn set_mtime(connection: &Connection, node: &GraphNode, mtime: UnixSeconds) -> CacheResult<()> {
     if let Some(attrname) = &node.derivation {
-        set_alias_mtime(attrname, &node.path, mtime)
+        set_alias_mtime(connection, attrname, &node.path, mtime)
     } else {
-        set_node_mtime(&node.path, mtime).map(|_| {})
+        set_node_mtime(connection, &node.path, mtime).map(|_| {})
     }
     .or_raise(|| CacheError::GettingOrSettingStoreNodeMtime)
 }
