@@ -43,7 +43,7 @@ impl TryFrom<&rnix::SyntaxNode> for NixAst {
             {
                 Some(Self::ImportOwnNameModuleExpression)
             }
-            Kind::NODE_PATH => {
+            Kind::NODE_PATH_REL => {
                 let text = value.text();
 
                 // If the last component in a path is the character '.',
