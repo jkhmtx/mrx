@@ -6,7 +6,7 @@ edition = "2024"
 [dependencies]
 clap = { version = "4.5.53", features = ["derive"] }
 mrx-utils = { path = "../mrx-utils" }
-rusqlite = { version = "0.38.0", default-features = false, features = [
+rusqlite = { version = "0.39.0", default-features = false, features = [
   "bundled",
   "extra_check",
   "modern_sqlite",
