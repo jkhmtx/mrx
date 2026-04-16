@@ -21,12 +21,6 @@ else
   PATH_add .direnv/failover-shell/bin
 fi
 
-DATABASE_PATH="${DATABASE_PATH}" \
-  _.prepare ||
-  DATABASE_PATH="${DATABASE_PATH}" \
-    nix run '#_.prepare' ||
-  true
-
 RUST_SRC_PATH="$(_.print-rust-src-path || nix run '#_.print-rust-src-path')"
 export RUST_SRC_PATH
 
@@ -37,7 +31,6 @@ set +eo pipefail
 # Add watch-files for dependencies within this file
 dependencies=(
   _.shell
-  _.prepare
   _.print-rust-src-path
 )
 
