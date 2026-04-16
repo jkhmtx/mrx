@@ -14,7 +14,7 @@ pub fn run(config: &Config, options: &Options) {
             }
         }
         Err(e) => {
-            eprintln!("{e}");
+            eprintln!("{e:?}");
 
             std::process::exit(1);
         }

@@ -9,7 +9,7 @@ pub fn run(config: &Config, options: &Options) {
     match show(config, options) {
         Ok(()) => {}
         Err(e) => {
-            eprintln!("{e}");
+            eprintln!("{e:?}");
 
             std::process::exit(1);
         }

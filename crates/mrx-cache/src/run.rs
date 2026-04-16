@@ -11,7 +11,7 @@ use crate::{
 pub fn run(config: &Config, options: &Options) {
     match cache(config, options) {
         Err(e) => {
-            eprintln!("{e}");
+            eprintln!("{e:?}");
 
             std::process::exit(1);
         }

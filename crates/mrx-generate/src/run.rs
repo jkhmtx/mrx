@@ -7,7 +7,7 @@ use crate::{
 
 pub fn run(config: &Config, options: &Options) {
     if let Err(e) = generate(config, options) {
-        eprintln!("{e}");
+        eprintln!("{e:?}");
 
         std::process::exit(1);
     }
