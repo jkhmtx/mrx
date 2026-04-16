@@ -82,7 +82,7 @@ SQL:
 impl core::error::Error for DbQueryError {}
 
 pub(crate) fn get_connection() -> DbResult<Connection, ConnectError> {
-    let database_path = env::var("DATABASE_PATH").or_raise(|| ConnectError::Environment)?;
+    let database_path = env::var("MRX_DATABASE_PATH").or_raise(|| ConnectError::Environment)?;
     let database_path = PathBuf::from(database_path);
 
     ensure_db_path(&database_path)?;

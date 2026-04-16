@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-export DATABASE_PATH="${DATABASE_PATH}"
+export MRX_DATABASE_PATH="${MRX_DATABASE_PATH}"
 
 mkdir -p .direnv
 

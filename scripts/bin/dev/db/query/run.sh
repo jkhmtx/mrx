@@ -1,12 +1,12 @@
 # shellcheck shell=bash
 
-export DATABASE_PATH="${DATABASE_PATH}"
+export MRX_DATABASE_PATH="${MRX_DATABASE_PATH}"
 
-dir="$(dirname "${DATABASE_PATH}")"
+dir="$(dirname "${MRX_DATABASE_PATH}")"
 mkdir -p "${dir}"
 
 function sqlite() {
-	sqlite3 "${DATABASE_PATH}" "${@}"
+	sqlite3 "${MRX_DATABASE_PATH}" "${@}"
 }
 
 if test -t 0; then
