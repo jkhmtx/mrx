@@ -4,6 +4,8 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
 
+    nix-filter.url = "github:numtide/nix-filter";
+
     rustOverlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -23,10 +25,12 @@
     nixpkgs,
     rustOverlay,
     mrx,
+    nix-filter,
     ...
   }: let
     mapSystems = import ./lib/internal/map-systems.nix {
       inherit pathAttrImports;
+      nixFilter = nix-filter.lib;
       nixpkgsSrc = nixpkgs;
       rustOverlay = overlay;
       upstreamMrx = mrx;

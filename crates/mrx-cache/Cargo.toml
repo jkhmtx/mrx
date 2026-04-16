@@ -12,6 +12,7 @@ rusqlite = { version = "0.39.0", default-features = false, features = [
   "extra_check",
   "modern_sqlite",
 ] }
+rusqlite_migration = "2.5.0"
 thiserror = "2.0.17"
 
 [lints]

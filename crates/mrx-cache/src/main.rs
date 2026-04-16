@@ -6,6 +6,7 @@ use mrx_cache::{
 };
 use mrx_utils as _;
 use rusqlite as _;
+use rusqlite_migration as _;
 use thiserror as _;
 
 fn main() {

@@ -1,8 +1,11 @@
 use std::env;
+use std::path::Path;
+use std::path::PathBuf;
 
 use exn::ResultExt;
 use mrx_utils::Attrname;
 use mrx_utils::fs::AbsolutePathBuf;
+use mrx_utils::fs::mk_dir;
 use mrx_utils::graph::NodeId;
 use mrx_utils::nix_store_path::NixStorePath;
 use rusqlite::OptionalExtension;
@@ -12,6 +15,8 @@ use rusqlite::{
     Result,
     Statement,
 };
+use rusqlite_migration::M;
+use rusqlite_migration::Migrations;
 use thiserror::Error as ThisError;
 
 use crate::unix_seconds::UnixSeconds;
@@ -24,6 +29,12 @@ pub enum ConnectError {
     Environment,
     #[error("ConnectError::Connect")]
     Connect,
+    #[error("ConnectError::Layout")]
+    Layout,
+    #[error("ConnectError::Migrations")]
+    Migrations,
+    #[error("ConnectError::Pragmas")]
+    Pragmas,
 }
 
 #[derive(Debug, ThisError)]
@@ -72,8 +83,56 @@ impl core::error::Error for DbQueryError {}
 
 pub(crate) fn get_connection() -> DbResult<Connection, ConnectError> {
     let database_path = env::var("DATABASE_PATH").or_raise(|| ConnectError::Environment)?;
+    let database_path = PathBuf::from(database_path);
 
-    Connection::open(&database_path).or_raise(|| ConnectError::Connect)
+    ensure_db_path(&database_path)?;
+
+    let connection = {
+        let mut connection = Connection::open(&database_path).or_raise(|| ConnectError::Connect)?;
+
+        run_migrations(&mut connection)?;
+        update_pragmas(&mut connection)?;
+
+        connection
+    };
+
+    Ok(connection)
+}
+
+fn ensure_db_path(path: &Path) -> DbResult<(), ConnectError> {
+    if path.extension().is_some()
+        && let Some(parent) = path.parent()
+    {
+        mk_dir(parent)
+    } else {
+        mk_dir(path)
+    }
+    .or_raise(|| ConnectError::Layout)
+}
+
+const MIGRATIONS_SLICE: &[M] = &[
+    M::up(include_str!("../../../sql/migrations/00-init.sql")),
+    M::up(include_str!(
+        "../../../sql/migrations/01-create-node-and-alias-tables.sql"
+    )),
+    M::up(include_str!(
+        "../../../sql/migrations/02-create-store-table.sql"
+    )),
+];
+
+const MIGRATIONS: Migrations<'_> = Migrations::from_slice(MIGRATIONS_SLICE);
+
+fn run_migrations(connection: &mut Connection) -> DbResult<(), ConnectError> {
+    MIGRATIONS
+        .to_latest(connection)
+        .or_raise(|| ConnectError::Migrations)
+}
+
+fn update_pragmas(connection: &mut Connection) -> DbResult<(), ConnectError> {
+    connection
+        .pragma_update(None, "journal_mode", "WAL")
+        .and_then(|()| connection.pragma_update(None, "foreign_keys", "ON"))
+        .or_raise(|| ConnectError::Pragmas)
 }
 
 /// # Errors
