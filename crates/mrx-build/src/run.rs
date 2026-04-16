@@ -11,7 +11,7 @@ pub fn run(config: &Config, options: &Options) {
             println!("{p}");
         }
     }) {
-        eprintln!("{e}");
+        eprintln!("{e:?}");
 
         std::process::exit(1);
     }
