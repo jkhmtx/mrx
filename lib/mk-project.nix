@@ -1,13 +1,19 @@
-pathAttrImports: let
+{
+  pathAttrImports,
+  nixFilter,
+  overlays,
+}: let
   mkProjectWith = import ./mk-project-with.nix;
 in
   inputs: let
-    nixpkgs =
+    nixpkgs' =
       if inputs ? pkgs
       then inputs.pkgs
       else if inputs ? nixpkgs
       then inputs.nixpkgs
       else throw "mkProject must be called with either 'pkgs' or 'nixpkgs'";
+
+    nixpkgs = nixpkgs'.appendOverlays overlays;
 
     mkProject = mkProjectWith nixpkgs;
 
@@ -15,6 +21,7 @@ in
 
     mrxProject = mkProject {
       inherit nixpkgs;
+      inherit nixFilter;
       inherit pathAttrImports;
     };
   in

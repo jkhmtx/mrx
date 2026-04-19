@@ -30,31 +30,31 @@
     ...
   }: let
     mapSystems = import ./lib/internal/map-systems.nix {
-      inherit pathAttrImports;
-      nixFilter = nix-filter.lib;
+      inherit overlays pathAttrImports nixFilter;
       nixpkgsSrc = nixpkgs;
-      rustOverlay = overlay;
       upstreamMrx = mrx;
     };
-    mkProject = import ./lib/mk-project.nix pathAttrImports;
 
-    overlay = rustOverlay.overlays.default;
+    mkProject = import ./lib/mk-project.nix {
+      inherit pathAttrImports nixFilter overlays;
+    };
+
+    nixFilter = nix-filter.lib;
+
+    overlays = [rustOverlay.overlays.default];
 
     pathAttrImports = {
       _ = import ./mrx.generated.nix;
     };
 
     systems = mapSystems ["aarch64-darwin" "x86_64-linux"];
-  in
-    {
-      apps.aarch64-darwin = systems.apps.aarch64-darwin;
-      apps.x86_64-linux = systems.apps.x86_64-linux;
+  in {
+    inherit mkProject;
 
-      packages.aarch64-darwin = systems.packages.aarch64-darwin;
-      packages.x86_64-linux = systems.packages.x86_64-linux;
-    }
-    // {
-      inherit mkProject;
-      rustOverlay = overlay;
-    };
+    apps.aarch64-darwin = systems.apps.aarch64-darwin;
+    apps.x86_64-linux = systems.apps.x86_64-linux;
+
+    packages.aarch64-darwin = systems.packages.aarch64-darwin;
+    packages.x86_64-linux = systems.packages.x86_64-linux;
+  };
 }

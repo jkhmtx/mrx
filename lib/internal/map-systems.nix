@@ -1,8 +1,8 @@
 {
   nixFilter,
   nixpkgsSrc,
+  overlays,
   pathAttrImports,
-  rustOverlay,
   upstreamMrx,
   ...
 }: let
@@ -12,7 +12,7 @@
     mkProject' = system: let
       nixpkgs = import nixpkgsSrc {
         inherit system;
-        overlays = [rustOverlay];
+        inherit overlays;
       };
 
       project = (mkProjectWith nixpkgs) {
