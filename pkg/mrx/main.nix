@@ -1,5 +1,6 @@
 {
   nixpkgs,
+  nixFilter,
   _,
   ...
 }: let
@@ -7,15 +8,6 @@
     cargo = _.pkg.rust;
     rustc = _.pkg.rust;
   };
-
-  crateSrcOf = dir: crate: [
-    dir
-    "${dir}/${crate}"
-    "${dir}/${crate}/src"
-    ".+\.rs"
-    "^Cargo\.lock$"
-    ".*Cargo\.toml"
-  ];
 in
   rustPlatform.buildRustPackage {
     pname = "mrx";
@@ -32,11 +24,17 @@ in
     # No tests!
     doCheck = false;
 
-    src = nixpkgs.lib.sourceByRegex ../../. (
-      []
-      ++ (crateSrcOf "crates" ".+")
-      ++ ["cached.sh"]
-    );
+    src = nixFilter {
+      root = ../../.;
+      include = [
+        "sql"
+        "crates"
+        "Cargo.lock"
+        "Cargo.toml"
+        (nixFilter.matchExt "rs")
+        (nixFilter.matchExt "sql")
+      ];
+    };
 
     cargoLock.lockFile = ../../Cargo.lock;
 

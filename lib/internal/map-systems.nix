@@ -1,4 +1,5 @@
 {
+  nixFilter,
   nixpkgsSrc,
   pathAttrImports,
   rustOverlay,
@@ -15,7 +16,7 @@
       };
 
       project = (mkProjectWith nixpkgs) {
-        inherit nixpkgs pathAttrImports;
+        inherit nixFilter nixpkgs pathAttrImports;
         upstreamMrx = upstreamMrx.packages.${system}.default;
       };
     in
