@@ -17,6 +17,7 @@
         mrx.follows = "mrx";
         nixpkgs.follows = "nixpkgs";
         rustOverlay.follows = "rustOverlay";
+        nix-filter.follows = "nix-filter";
       };
     };
   };

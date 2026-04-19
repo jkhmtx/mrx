@@ -5,6 +5,9 @@
         "mrx": [
           "mrx"
         ],
+        "nix-filter": [
+          "nix-filter"
+        ],
         "nixpkgs": [
           "nixpkgs"
         ],
@@ -13,11 +16,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1769007819,
-        "narHash": "sha256-6FeGmH0ucvECS1fgnYvGZrDfnNZ2hVEtt8U4YX8hXFQ=",
+        "lastModified": 1776614999,
+        "narHash": "sha256-lhxkUbtMWVv2PbfVSGKAJQCAzO/73nUwE27OtucWqS0=",
         "owner": "jkhmtx",
         "repo": "mrx",
-        "rev": "6d42a76dc64cbfd8613bbc702d8521d3701aba92",
+        "rev": "3f5ea49e6739946989e69008d093ef460ad723fa",
         "type": "github"
       },
       "original": {
