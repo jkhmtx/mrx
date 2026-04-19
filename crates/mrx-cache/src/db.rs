@@ -79,14 +79,28 @@ SQL:
     }
 }
 
-static DEFAULT_DATABASE_PATH: &str = "~/.cache/mrx/main.db";
+static DEFAULT_DATABASE_PATH: &str = "mrx/main.db";
 
 impl core::error::Error for DbQueryError {}
 
 pub(crate) fn get_connection() -> DbResult<Connection, ConnectError> {
     let database_path = match env::var("MRX_DATABASE_PATH").map(PathBuf::from) {
         Ok(path) => Ok(path),
-        Err(env::VarError::NotPresent) => Ok(PathBuf::from(DEFAULT_DATABASE_PATH)),
+        Err(env::VarError::NotPresent) => {
+            let mut path = if let Ok(path) = env::var("XDG_CACHE_HOME") {
+                PathBuf::from(path)
+            } else {
+                let mut path =
+                    PathBuf::from(env::var("HOME").or_raise(|| ConnectError::Environment)?);
+
+                path.push(".cache");
+                path
+            };
+
+            path.push(DEFAULT_DATABASE_PATH);
+
+            Ok(path)
+        }
         Err(e) => Err(e),
     }
     .or_raise(|| ConnectError::Environment)?;
