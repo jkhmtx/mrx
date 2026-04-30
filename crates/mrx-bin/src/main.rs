@@ -9,6 +9,13 @@ use crate::cli::{
 };
 
 fn main() {
+    tracing_subscriber::fmt()
+        .without_time()
+        .with_target(false)
+        .compact()
+        .with_writer(std::io::stderr)
+        .init();
+
     let (config, options) = Mrx::args().unwrap();
     handle(config, options);
 }

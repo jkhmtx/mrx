@@ -1,0 +1,7 @@
+entrypoint = "flake.nix"
+
+derivations = [":*main.nix"]
+
+installables = ["#_.shell"]
+
+generated-out-path = "mrx.generated.nix"

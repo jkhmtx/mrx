@@ -16,5 +16,12 @@ mrx-generate = { path = "../mrx-generate" }
 mrx-hook = { path = "../mrx-hook" }
 mrx-show = { path = "../mrx-show" }
 mrx-utils = { path = "../mrx-utils" }
+
 anyhow = "1.0.100"
 clap = { version = "4.5.53", features = ["derive"] }
+tracing = { version = "0.1", default-features = false, features = ["std"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = [
+  "fmt",
+  "ansi",
+  "env-filter",
+] }

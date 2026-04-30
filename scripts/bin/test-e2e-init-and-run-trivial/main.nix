@@ -4,7 +4,7 @@
   ...
 }:
 nixpkgs.writeShellApplication {
-  name = import _/name;
+  name = import ./_/name;
 
   runtimeInputs = [
     _.pkg.mrx

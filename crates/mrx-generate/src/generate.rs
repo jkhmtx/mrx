@@ -17,6 +17,7 @@ use mrx_utils::{
     find_nix_path_attrset,
 };
 use thiserror::Error as ThisError;
+use tracing::info;
 
 use crate::Options;
 
@@ -94,6 +95,7 @@ fn write_name_files(attrset: &PathAttrset) -> GenerateResult<()> {
     });
 
     for (attr_name, name_dir) in name_dir_pairs {
+        info!("{}: {}", attr_name, name_dir.display());
         mk_dir(&name_dir).or_raise(|| GenerateError::WriteBin(attr_name.clone()))?;
 
         let name = {
