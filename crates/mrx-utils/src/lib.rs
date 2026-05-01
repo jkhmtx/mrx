@@ -18,7 +18,6 @@ pub use build_and_symlink::build_and_symlink;
 pub use config::{
     Config,
     ConfigInitResult,
-    ConfigValueError,
     Entrypoint,
     MrxCli,
 };
