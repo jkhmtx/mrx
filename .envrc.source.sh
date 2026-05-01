@@ -34,6 +34,9 @@ dependencies=(
   _.print-rust-src-path
 )
 
+watch_file mrx.ignore
+watch_file mrx.toml
+
 while read -r file; do
   watch_file "${file}"
 done < <(

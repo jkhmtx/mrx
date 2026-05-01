@@ -7,24 +7,13 @@ use ignore::WalkBuilder;
 
 use crate::{
     Config,
-    ConfigValueError,
     PathAttrset,
     attr::PathAttrsetResult,
 };
 
 fn get_config_ignore(config: &Config) -> Option<&PathBuf> {
-    config
-        .get_ignore_file()
-        .map_err(|e| match e {
-            ConfigValueError::MissingValue(_) => {
-                PathBuf::new().join(config.dir()).join("mrx.ignore.lst")
-            }
-            ConfigValueError::Io(e) => {
-                panic!("{e:?}");
-            }
-        })
-        .ok()
-        .and_then(|path| if path.exists() { Some(path) } else { None })
+    let ignore = config.get_ignore_file();
+    if ignore.exists() { Some(ignore) } else { None }
 }
 
 /// # Errors
