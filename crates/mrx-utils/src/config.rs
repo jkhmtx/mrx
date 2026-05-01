@@ -10,6 +10,8 @@ use exn::ResultExt as _;
 use serde::Deserialize;
 
 const DEFAULT_CONFIG_PATH: &str = "mrx.toml";
+const DEFAULT_IGNORE_FILE_PATH: &str = "mrx.ignore";
+const DEFAULT_GENERATED_OUT_PATH: &str = "mrx.generated.toml";
 
 use thiserror::Error as ThisError;
 
@@ -34,12 +36,13 @@ impl ConfigToml {
 
 #[derive(Debug, Clone)]
 pub struct Config {
+    default_entrypoint: Option<Entrypoint>,
+    default_generated_out_path: PathBuf,
+    default_ignore_file: PathBuf,
+    default_installables: Vec<String>,
+
     path: PathBuf,
     toml: ConfigToml,
-
-    default_generated_out_path: PathBuf,
-    default_installables: Vec<String>,
-    default_entrypoint: Option<Entrypoint>,
 }
 
 pub type ConfigInitResult<T> = Result<T, exn::Exn<ConfigInitError>>;
@@ -70,21 +73,14 @@ impl Config {
             .or_else(|| pathbuf_if_exists("./default.nix").map(Entrypoint::File));
 
         Ok(Self {
+            default_entrypoint,
+            default_generated_out_path: PathBuf::from(DEFAULT_GENERATED_OUT_PATH),
+            default_ignore_file: PathBuf::from(DEFAULT_IGNORE_FILE_PATH),
+            default_installables: vec![],
             path,
             toml,
-            default_generated_out_path: PathBuf::from("mrx.generated.nix"),
-            default_installables: vec![],
-            default_entrypoint,
         })
     }
-}
-
-#[derive(Debug, ThisError)]
-pub enum ConfigValueError {
-    #[error("ConfigValueError::MissingValue: '{0}'")]
-    MissingValue(String),
-    #[error("ConfigValudError::Io: '{0}'")]
-    Io(#[from] std::io::Error),
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -121,8 +117,6 @@ impl TryFrom<PathBuf> for Entrypoint {
     }
 }
 
-type ConfigValueResult<T> = Result<T, ConfigValueError>;
-
 impl Config {
     #[must_use]
     pub fn dir(&self) -> PathBuf {
@@ -137,13 +131,11 @@ impl Config {
         self.dir().join(".mrx")
     }
 
-    /// # Errors
-    /// Errors if `ignore_file` is not present in the config, since there is no default.
-    pub fn get_ignore_file(&self) -> ConfigValueResult<&PathBuf> {
+    pub fn get_ignore_file(&self) -> &PathBuf {
         self.toml
             .ignore_file
             .as_ref()
-            .ok_or(ConfigValueError::MissingValue("ignore_file".to_string()))
+            .unwrap_or(&self.default_ignore_file)
     }
 
     #[must_use]
